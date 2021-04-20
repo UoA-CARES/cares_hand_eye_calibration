@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="camera_type" value="realsense"/>
+    <!-- The input reference frames -->
+    <arg name="eye_on_hand"           default="true" />
+    <arg name="robot_base_frame"      default="base_link" />
+    <arg name="robot_effector_frame"  default="ee_link" />
+    <arg name="tracking_base_frame"   default="zivid_base_link" />
+    <arg name="tracking_marker_frame" default="zivid_camera_aruco_0" />
+
+    <arg name="serial_no"      default=""/>
+    <arg name="json_file_path" default=""/>
+
+    <arg name="ns" default="zivid_camera"/>
+    <arg name="rotation_flag"         default="100"/>
+
+    <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera">
+        <param name="use_save"       value="false"/>
+        <param name="save_directory" value=""/>
+    </node>
+    <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
+    <node name="zivid_sample" pkg="maara_ur5" type="zivid_continuous_capture.py"/>    
+
+    <group ns="camera">
+        <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+            <arg name="serial_no"         value="$(arg serial_no)"/>
+            <arg name="json_file_path"    value="$(arg json_file_path)"/>
+            <arg name="depth_width"       value="640"/>
+            <arg name="depth_height"      value="480"/>
+            <!-- <arg name="depth_width"       value="1280"/> -->
+            <!-- <arg name="depth_height"      value="720"/> -->
+            <arg name="depth_fps"         value="30"/>
+            <arg name="color_width"       value="640"/>
+            <arg name="color_height"      value="480"/>
+            <!-- <arg name="color_width"       value="1280"/> -->
+            <!-- <arg name="color_height"      value="720"/> -->
+            <arg name="color_fps"         value="30"/>
+            <arg name="enable_depth"      value="true"/>
+            <arg name="enable_color"      value="true"/>
+            <arg name="enable_infra1"     value="false"/>
+            <arg name="enable_infra2"     value="false"/>
+            <arg name="enable_fisheye"    value="false"/>
+            <arg name="enable_gyro"       value="false"/>
+            <arg name="enable_accel"      value="false"/>
+            <arg name="enable_pointcloud" value="true"/>
+            <arg name="enable_sync"       value="true"/>
+            -<arg name="align_depth"      value="true"/>
+            <arg name="tf_prefix"         value="camera"/>
+        </include>
+    </group>
+
+    <arg name="image"         default="color/image_color"/>
+    <arg name="markers"       default="aruco"/>
+    <arg name="depth_image"   default="depth/image_raw"/>
+    <arg name="camera_info"   default="depth/camera_info"/>
+    <arg name="display"       default="true"/>
+    <arg name="is_depth_in_meters" default="true" />
+    <group ns="$(arg ns)">
+        <node name="depth_detector_node" pkg="aruco_detector" type="depth_detector_node" output="screen">
+          <param name="image"         value="$(arg image)" />
+          <param name="markers"       value="$(arg markers)"/>
+          <param name="depth_image"   value="$(arg depth_image)" />
+          <param name="camera_info"   value="$(arg camera_info)" />
+          <param name="tf_prefix"     value="$(arg ns)" />
+          <param name="display"       value="$(arg display)"/>
+          <param name="is_depth_in_meters" type="string" value="$(arg is_depth_in_meters)" />
+        </node>
+     </group>
+
+    <arg name="realsense_image"         default="color/image_raw"/>
+    <arg name="realsense_depth_image"   default="aligned_depth_to_color/image_raw"/>
+    <arg name="realsense_camera_info"   default="color/camera_info"/>
+    <arg name="realsense_is_depth_in_meters" default="false" />
+     <group ns="camera">
+        <node name="depth_detector_node" pkg="aruco_detector" type="depth_detector_node" output="screen">
+          <param name="image"         value="$(arg realsense_image)" />
+          <param name="markers"       value="$(arg markers)"/>
+          <param name="depth_image"   value="$(arg realsense_depth_image)" />
+          <param name="camera_info"   value="$(arg realsense_camera_info)" />
+          <param name="tf_prefix"     value="camera" />
+          <param name="display"       value="$(arg display)"/>
+          <param name="is_depth_in_meters" type="string" value="$(arg realsense_is_depth_in_meters)" />
+        </node>
+     </group>
+
+    <!-- Run the ViSP solver to determine the extrinsic parameters -->
+    <node name="hand_eye_solver"
+          pkg="visp_hand2eye_calibration"
+          type="visp_hand2eye_calibration_calibrator">
+        <remap from="/compute_effector_camera_quick" to="compute_effector_camera_quick"/>
+    </node>
+
+    <!-- <node name="dummy_handeye" pkg="tf" type="static_transform_publisher" args="0 0 0.0 0 0 0 $(arg robot_effector_frame) $(arg tracking_base_frame) 10" /> -->
+    
+    <!--<node name="handeye_calibration_node" pkg="maara_ur5" type="handeye_calibration_node.py" output="screen">
+        <param name="eye_on_hand"             value="$(arg eye_on_hand)"/>
+        <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
+        <param name="tracking_base_frame"     value="$(arg tracking_base_frame)" />
+        <param name="tracking_marker_frame"   value="$(arg tracking_marker_frame)" />
+        <param name="rotation_flag"           value="$(arg rotation_flag)" />
+    </node>-->
+
+    <!-- Setup rviz -->
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find maara_ur5)/rviz/arm-mapping.rviz" />
+
+</launch>
