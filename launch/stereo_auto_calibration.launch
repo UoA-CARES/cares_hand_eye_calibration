@@ -17,7 +17,7 @@
         <arg name="cameras" value="uoa_ur5_pair" />
     </include>-->
 
-    <node name="stereo_calibration" pkg="stereo_hand_eye_calibration" type="stereo_auto_calibration_node.py" output="screen">
+    <node name="stereo_calibration" pkg="hand_eye_calibration" type="stereo_auto_calibration_node.py" output="screen">
         <param name="eye_on_hand"             value="$(arg eye_on_hand)"/>
         <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
         <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
@@ -37,7 +37,7 @@
     </node>
 
     <!-- Setup rviz -->
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find stereo_hand_eye_calibration)/rviz/arm-mapping.rviz" />
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find hand_eye_calibration)/rviz/arm-mapping.rviz" />
 <!--     <node type="rqt_gui" name="rqt_gui" pkg="rqt_gui" />
  -->    
 </launch>

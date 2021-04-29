@@ -240,7 +240,7 @@ def move_arm():
     world_link = "world"
     #print(ur5.get_current_pose())
     start_poses = []
-    increment = [[0,0],[0,0.05], [0,-0.05], [0.05, 0], [-0.05,0]]
+    increment = [[0,0],[0,0.07], [0,-0.07], [0.05, 0], [-0.05,0]]
     for i in range(len(increment)):
         start_pose = Pose()
         start_pose.position.x = init_pose.position.x+increment[i][0]
@@ -273,8 +273,8 @@ def move_arm():
 
     #create path plan around the estimated position0
     dx = 2
-    dz = 2
-    radius  = 0.6
+    dz = 3
+    radius  = 0.7
     step_x = 0.2
     step_z = 0.2
     print("waiting for service")
@@ -376,9 +376,9 @@ def main():
     rospy.init_node('stereo_auto_calibration_node')
     time.sleep(5.0)
     #if arm is active
-    #image_list, filepath = move_arm()
-    filepath = "/home/anyone/scans/2021-04-15-13-54-49/"
-    image_list = loadData(filepath) 
+    image_list, filepath = move_arm()
+    #filepath = "/home/anyone/scans/2021-04-27-18-12-24/"
+    #image_list = loadData(filepath) 
 
     #####################################################
     #should have image lists
@@ -419,6 +419,12 @@ def main():
     charuco_detect = rospy.ServiceProxy('charuco_detector', CharucoDetect)
     print("proxy created")
     bridge = CvBridge()
+    #stereoinfo.R_left_right =  np.reshape(np.linalg.inv(np.reshape(stereoinfo.R_left_right,(3,3))),(9,1))
+    #stereoinfo.T_left_right = np.array(stereoinfo.T_left_right)
+    #Q_temp = np.array(stereoinfo.Q) 
+    #Q_temp[7] = -1*stereoinfo.Q[7] 
+    #Q_temp[14] = -1*stereoinfo.Q[14]#np.reshape(np.linalg.inv(np.reshape(stereoinfo.Q,(4,4))),(16,1))
+    #stereoinfo.Q = Q_temp
     for i in range(len(recL)):
         #get pose
         recL_msg = bridge.cv2_to_imgmsg(recL[i], encoding="passthrough")

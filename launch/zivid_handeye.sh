@@ -7,4 +7,4 @@ sleep 5
 gnome-terminal --tab -- bash -c "s2;roslaunch ur5_moveit_config move_group.launch limited:=true; exec bash"
 sleep 3
 #Launch the mapping node
-gnome-terminal --tab -- bash -c "s2;roslaunch maara_ur5 zivid_handeye_calibration.launch; exec bash"
+gnome-terminal --tab -- bash -c "s2;roslaunch hand_eye_calibration zivid_handeye_calibration.launch; exec bash"
