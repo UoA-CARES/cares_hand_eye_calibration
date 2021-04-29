@@ -10,4 +10,4 @@ sleep 3
 gnome-terminal --tab -- bash -c "source ~/catkin_ws3/devel/setup.bash;roslaunch stereo_inference_ros stereo_pair.launch cameras:=stereo_pair_uoa method:=Rectify; exec bash"
 sleep 3
 #Launch the calibration control code
-gnome-terminal --tab -- bash -c "source ~/catkin_ws/devel/setup.bash;roslaunch hand_eye_calibration stereo_auto_calibration.launch; exec bash"
+gnome-terminal --tab -- bash -c "source ~/catkin_ws/devel/setup.bash;roslaunch cares_hand_eye_calibration stereo_auto_calibration.launch; exec bash"

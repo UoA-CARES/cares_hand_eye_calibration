@@ -47,7 +47,7 @@
 
     <!-- <node name="dummy_handeye" pkg="tf" type="static_transform_publisher" args="0 0 0.0 0 0 0 $(arg robot_effector_frame) $(arg tracking_base_frame) 10" /> -->
     
-    <node name="handeye_calibration_node" pkg="hand_eye_calibration" type="handeye_calibration_node.py" output="screen">
+    <node name="handeye_calibration_node" pkg="cares_hand_eye_calibration" type="handeye_calibration_node.py" output="screen">
         <param name="eye_on_hand"             value="$(arg eye_on_hand)"/>
         <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
         <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
@@ -57,6 +57,6 @@
     </node>
 
     <!-- Setup rviz -->
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find hand_eye_calibration)/rviz/arm-mapping.rviz" />
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find cares_hand_eye_calibration)/rviz/arm-mapping.rviz" />
 
 </launch>
