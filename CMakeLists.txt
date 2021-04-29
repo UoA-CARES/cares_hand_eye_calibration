@@ -11,12 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  ur_kinematics
 )
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ur_kin_py
-  CATKIN_DEPENDS ur_kinematics
 #  DEPENDS system_lib
 )
 #add_executable(inverse_kinematics scripts/ik.cpp)
