@@ -5,6 +5,9 @@ Hand Eye Calibration for Robot arms and RGB/RGBD cameras
 In addition to the sensor drivers you want to calibrate with please install visp handeye
 ```
 sudo apt-get install ros-$ROS_DISTRO-visp
+cd ~/catkin_ws/src
+git clone https://github.com/UoA-CARES/stereo_calibration
+git clone https://github.com/UoA-CARES/mini_rig_ros
 ```
 
 ## STEREO
