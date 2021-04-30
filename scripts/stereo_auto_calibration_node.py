@@ -376,9 +376,9 @@ def main():
     rospy.init_node('stereo_auto_calibration_node')
     time.sleep(5.0)
     #if arm is active
-    image_list, filepath = move_arm()
-    #filepath = "/home/anyone/scans/2021-04-27-18-12-24/"
-    #image_list = loadData(filepath) 
+    #image_list, filepath = move_arm()
+    filepath = "/home/anyone/scans/2021-04-27-18-12-24/"
+    image_list = loadData(filepath) 
 
     #####################################################
     #should have image lists
@@ -425,6 +425,7 @@ def main():
     #Q_temp[7] = -1*stereoinfo.Q[7] 
     #Q_temp[14] = -1*stereoinfo.Q[14]#np.reshape(np.linalg.inv(np.reshape(stereoinfo.Q,(4,4))),(16,1))
     #stereoinfo.Q = Q_temp
+    transformation_list = []
     for i in range(len(recL)):
         #get pose
         recL_msg = bridge.cv2_to_imgmsg(recL[i], encoding="passthrough")
@@ -433,14 +434,25 @@ def main():
         if transform_from_camera_to_marker.transform.transform.translation.x == 0 and transform_from_camera_to_marker.transform.transform.translation.y ==0 and transform_from_camera_to_marker.transform.transform.translation.z == 0:
             continue
         sample = {'robot':image_list[i][2],'optical':transform_from_camera_to_marker.transform}
-        print(sample)
-        hand_eye_calibrator.collect_samples(sample)
-    calibration = hand_eye_calibrator.compute_calibration()
+        #print(sample)
+        #hand_eye_calibrator.collect_samples(sample)
+        #opencv calibration 
+        base_to_ee_translation = np.array([image_list[i][2].transform.translation.x, image_list[i][2].transform.translation.y, image_list[i][2].transform.translation.z])
+        base_to_ee_rotation = np.array(euler_from_quaternion([image_list[i][2].transform.rotation.x, image_list[i][2].transform.rotation.y, image_list[i][2].transform.rotation.z, -image_list[i][2].transform.rotation.w]))
+        sensor_to_marker_translation = np.array([transform_from_camera_to_marker.transform.transform.translation.x, transform_from_camera_to_marker.transform.transform.translation.y, transform_from_camera_to_marker.transform.transform.translation.z])
+        sensor_to_marker_rotation = np.array(euler_from_quaternion([transform_from_camera_to_marker.transform.transform.rotation.x, transform_from_camera_to_marker.transform.transform.rotation.y, transform_from_camera_to_marker.transform.transform.rotation.z, -transform_from_camera_to_marker.transform.transform.rotation.w]))
+        t = np.array([base_to_ee_rotation, base_to_ee_translation*-1.0, sensor_to_marker_rotation, sensor_to_marker_translation*-1.0 ])
+        print(t)
+        transformation_list.append(t)
+    #calibration = hand_eye_calibrator.compute_calibration()
+    transformation_list = np.array(transformation_list)
+    print(transformation_list)
+    calibration = cv2.calibrateHandEye(transformation_list[0,:], transformation_list[1,:], transformation_list[2,:], transformation_list[3,:])
     print(calibration)
     if calibration is not None:
         now = datetime.now()
         dt_string = now.strftime("%Y-%m-%d-%H-%M-%S")
-        calibration.to_file(filepath[:-1], "calibration-"+dt_string)
+        #to_file(filepath[:-1], "calibration-"+dt_string)
     #####################################################
     print("Done calibration")
 
