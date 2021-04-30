@@ -12,7 +12,7 @@ import os
 import message_filters
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
-from maara_msgs.msg import StereoCameraInfo
+from cares_msgs.msg import StereoCameraInfo
 import sensor_msgs.point_cloud2 as pc2
 import dynamic_reconfigure.client
 # from zivid_camera.srv import *
