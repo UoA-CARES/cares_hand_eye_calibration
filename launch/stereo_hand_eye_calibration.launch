@@ -12,8 +12,6 @@
     <arg name="json_file_path" default=""/>
     <arg name="camera"         default="camera"/>
 
-    
-
     <include file="$(find aruco_detector)/launch/stereo_detector.launch" />
 
     <!-- Run the ViSP solver to determine the extrinsic parameters -->

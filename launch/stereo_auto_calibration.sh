@@ -1,6 +1,6 @@
 #!/bin/bash
 #Launch the UR5 communication stuff
-gnome-terminal --tab -- bash -c "source ~/catkin_ws/devel/setup.bash;roslaunch mini_rig_description ur5_real.launch; exec bash"
+gnome-terminal --tab -- bash -c "source ~/catkin_ws/devel/setup.bash;roslaunch mini_rig_bringup ur5_real.launch; exec bash"
 #Wait until comms with the UR5 is up and running
 sleep 5
 #Launch move group controller
