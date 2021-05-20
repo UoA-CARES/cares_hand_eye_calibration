@@ -131,23 +131,22 @@ class MoveGroupPythonInterface(object):
     # We can get the name of the reference frame for this robot:
     planning_frame = move_group.get_planning_frame()
     get_pose_reference_frame = move_group.get_pose_reference_frame()
-    print "============ Planning frame: %s" % planning_frame
-    print "============ Pose frame: %s" % get_pose_reference_frame
+    print("============ Planning frame: %s" % planning_frame)
+    print("============ Pose frame: %s" % get_pose_reference_frame)
     
 
     # We can also print the name of the end-effector link for this group:
     eef_link = move_group.get_end_effector_link()
-    print "============ End effector link: %s" % eef_link
+    print("============ End effector link: %s" % eef_link)
 
     # We can get a list of all the groups in the robot:
     group_names = robot.get_group_names()
-    print "============ Available Planning Groups:", robot.get_group_names()
+    print("============ Available Planning Groups:", robot.get_group_names())
 
     # Sometimes for debugging it is useful to print the entire state of the
     # robot:
-    print "============ Printing robot state"
-    print robot.get_current_state()
-    print ""
+    print("============ Printing robot state")
+    print(robot.get_current_state())
     ## END_SUB_TUTORIAL
 
     # Misc variables
@@ -517,107 +516,3 @@ class MoveGroupPythonInterface(object):
 
     # We wait for the planning scene to update.
     return self.wait_for_state_update(box_is_attached=False, box_is_known=False, timeout=timeout)
-
-def main():
-  try:
-    print ""
-    print "----------------------------------------------------------"
-    print "Welcome to the MoveIt MoveGroup Python Interface"
-    print "----------------------------------------------------------"
-    print "Press Ctrl-D to exit at any time"
-    print ""
-    print "============ Press `Enter` to begin the tutorial by setting up the moveit_commander ..."
-    #raw_input()
-    tutorial = MoveGroupPythonInterface()
-    #print "============ Press `Enter` to execute a movement using a joint state goal ..."
-    #raw_input()
-    #tutorial.go_to_joint_state()
-
-    #print "============ Press `Enter` to execute a movement using a pose goal ..."
-    #raw_input()
-    pose_goal = geometry_msgs.msg.Pose()
-
-    pose_goal.orientation.w = 1.0
-    pose_goal.position.x = float(x) / 1000
-    pose_goal.position.y = float(y) / 1000
-    pose_goal.position.z = 0.3
-    
-    tutorial.go_to_pose_goal(pose_goal)
-
-    #print "============ Press `Enter` to plan and display a Cartesian path ..."
-    #raw_input()
-    #cartesian_plan, fraction = tutorial.plan_cartesian_path()
-
-    #print "============ Press `Enter` to display a saved trajectory (this will replay the Cartesian path)  ..."
-    #raw_input()
-    #tutorial.display_trajectory(cartesian_plan)
-
-    #print "============ Press `Enter` to execute a saved path ..."
-    #raw_input()
-    #tutorial.execute_plan(cartesian_plan)
-
-    #print "============ Press `Enter` to add a box to the planning scene ..."
-    #raw_input()
-    #tutorial.add_box()
-
-    #print "============ Press `Enter` to attach a Box to the Panda robot ..."
-    #raw_input()
-    #tutorial.attach_box()
-
-    #print "============ Press `Enter` to plan and execute a path with an attached collision object ..."
-    #raw_input()
-    #cartesian_plan, fraction = tutorial.plan_cartesian_path(scale=-1)
-    #tutorial.execute_plan(cartesian_plan)
-
-    #print "============ Press `Enter` to detach the box from the Panda robot ..."
-    #raw_input()
-    #tutorial.detach_box()
-
-    #print "============ Press `Enter` to remove the box from the planning scene ..."
-    #raw_input()
-    #tutorial.remove_box()
-
-    print "============ Python tutorial demo complete!"
-  except rospy.ROSInterruptException:
-    return
-  except KeyboardInterrupt:
-    return
-
-if __name__ == '__main__':
-  main()
-
-## BEGIN_TUTORIAL
-## .. _moveit_commander:
-##    http://docs.ros.org/melodic/api/moveit_commander/html/namespacemoveit__commander.html
-##
-## .. _MoveGroupCommander:
-##    http://docs.ros.org/melodic/api/moveit_commander/html/classmoveit__commander_1_1move__group_1_1MoveGroupCommander.html
-##
-## .. _RobotCommander:
-##    http://docs.ros.org/melodic/api/moveit_commander/html/classmoveit__commander_1_1robot_1_1RobotCommander.html
-##
-## .. _PlanningSceneInterface:
-##    http://docs.ros.org/melodic/api/moveit_commander/html/classmoveit__commander_1_1planning__scene__interface_1_1PlanningSceneInterface.html
-##
-## .. _DisplayTrajectory:
-##    http://docs.ros.org/melodic/api/moveit_msgs/html/msg/DisplayTrajectory.html
-##
-## .. _RobotTrajectory:
-##    http://docs.ros.org/melodic/api/moveit_msgs/html/msg/RobotTrajectory.html
-##
-## .. _rospy:
-##    http://docs.ros.org/melodic/api/rospy/html/
-## CALL_SUB_TUTORIAL imports
-## CALL_SUB_TUTORIAL setup
-## CALL_SUB_TUTORIAL basic_info
-## CALL_SUB_TUTORIAL plan_to_joint_state
-## CALL_SUB_TUTORIAL plan_to_pose
-## CALL_SUB_TUTORIAL plan_cartesian_path
-## CALL_SUB_TUTORIAL display_trajectory
-## CALL_SUB_TUTORIAL execute_plan
-## CALL_SUB_TUTORIAL add_box
-## CALL_SUB_TUTORIAL wait_for_scene_update
-## CALL_SUB_TUTORIAL attach_object
-## CALL_SUB_TUTORIAL detach_object
-## CALL_SUB_TUTORIAL remove_object
-## END_TUTORIAL

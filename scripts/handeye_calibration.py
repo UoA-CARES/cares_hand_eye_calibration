@@ -2,6 +2,7 @@ import os
 import yaml
 import rospy
 from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
+import tf
 
 class HandeyeCalibration(object):
     """
@@ -61,11 +62,15 @@ class HandeyeCalibration(object):
     def to_dict(self):
         """
         Returns a dictionary representing this calibration.
-
         :return: a dictionary representing this calibration.
-
         :rtype: dict[string, string|dict[string,float]]
         """
+        ox = self.transformation.transform.rotation.x
+        oy = self.transformation.transform.rotation.y
+        oz = self.transformation.transform.rotation.z
+        ow = self.transformation.transform.rotation.w
+        (r, p, y) = tf.transformations.euler_from_quaternion([ox, oy, oz, ow])
+
         ret = {
             'eye_on_hand': self.eye_on_hand,
             'tracking_base_frame': self.transformation.child_frame_id,
@@ -76,7 +81,10 @@ class HandeyeCalibration(object):
                 'qx': self.transformation.transform.rotation.x,
                 'qy': self.transformation.transform.rotation.y,
                 'qz': self.transformation.transform.rotation.z,
-                'qw': self.transformation.transform.rotation.w
+                'qw': self.transformation.transform.rotation.w,
+                'roll'  : r,
+                'pitch' : p,
+                'yaw'   : y
             }
         }
         if self.eye_on_hand:
@@ -85,6 +93,7 @@ class HandeyeCalibration(object):
             ret['robot_base_frame'] = self.transformation.header.frame_id
 
         return ret
+
 
     def from_dict(self, in_dict):
         """

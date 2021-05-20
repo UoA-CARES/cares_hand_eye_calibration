@@ -50,6 +50,20 @@ def convertCloudFromOpen3dToRos(open3d_cloud, stamp=None, frame_id="odom"):
     # create ros_cloud
     return pc2.create_cloud(header, fields, cloud_data)
 
+def extract_xyzrgb(self, data):
+    pc = ros_numpy.point_cloud2.pointcloud2_to_array(data)
+    pc = pc.flatten()
+    pc = ros_numpy.point_cloud2.split_rgb_field(pc)
+    xyzrgb=np.zeros((pc.shape[0],6))
+    xyzrgb[:,0]=pc['x']
+    xyzrgb[:,1]=pc['y']
+    xyzrgb[:,2]=pc['z']
+    xyzrgb[:,3]=pc['r']
+    xyzrgb[:,4]=pc['g']
+    xyzrgb[:,5]=pc['b']
+    xyzrgb = xyzrgb[~np.isnan(xyzrgb).any(axis=1)]        
+    return xyzrgb
+
 def convertCloudFromRosToOpen3d(ros_cloud):
     
     # Get cloud data from ros_cloud

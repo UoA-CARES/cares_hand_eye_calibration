@@ -13,7 +13,7 @@ class HandeyeCalibrator(object):
     """Minimum samples required for a successful calibration."""
 
     def __init__(self):
-        self.eye_on_hand = rospy.get_param('~eye_on_hand', False)
+        self.eye_on_hand = rospy.get_param('~eye_on_hand', True)
         """
         if false, it is a eye-on-base calibration
 
