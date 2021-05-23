@@ -48,20 +48,6 @@ def create_pose_msg(x, y, z, ox=0, oy=0, oz=0, ow=1):
 
 def get_rotation_flag():
     return rospy.get_param('~rotation_flag')
-    # if rotation_flag == 0:
-    #     return "ryp"
-    # elif rotation_flag ==100:
-    #     return "rpy"
-    # elif rotation_flag == 1:
-    #     return "pry"
-    # elif rotation_flag == 10:
-    #     return "yrp"
-    # elif rotation_flag == 11:
-    #     return "ryp2"
-    # elif rotation_flag == -100:
-    #     return "rpy2"
-    # else:
-    #     rospy.logerr("error not defined %s",rotation_flag)
 
 def quarternion_to_rpy(quaternion):
     (r,p,y)= euler_from_quaternion([quaternion.x,quaternion.y,quaternion.z,quaternion.w])
@@ -129,8 +115,8 @@ def save_transform(filename, transform):
     with open(filename, "w") as file:
         documents = yaml.dump(transform_dic, file)
 
-def read_transforms(f):
-    with open(f) as file:
+def read_transform(filepath):
+    with open(filepath) as file:
         t_map = yaml.load(file, Loader=yaml.Loader)
         t = TransformStamped()
         t.transform.translation.x = t_map["translation"]["x"]
@@ -148,10 +134,10 @@ def load_transforms(path):
     print("Found {} transforms at {}".format(len(tuple(files)), path))
     
     transforms = []
-    for i, f in enumerate(files):
+    for i, file in enumerate(files):
         try:
-            img = read_transforms(f)
-            transforms.append(img)
+            transform = read_transform(file)
+            transforms.append(transform)
         except KeyError as e:
             print("error at ", i)
             print(e)
@@ -159,16 +145,16 @@ def load_transforms(path):
 
     return transforms, files
 
-def loadImage(path):
-    imgs = []
+def loadImages(path):
+    images = []
     files = glob(path)
     files.sort()
     print("Found {} images at {}".format(len(tuple(files)), path))
 
-    for i, f in enumerate(files):
-        img = cv2.imread(f)
-        imgs.append(img)
-    return imgs, files
+    for i, file in enumerate(files):
+        image = cv2.imread(file)
+        images.append(image)
+    return images, files
 
 def rectify_remap(images_left, images_right, stereo_info):
     w = stereo_info.left_info.width
