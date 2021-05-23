@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="file_path" default="/home/anyone/calibration_images/2021-05-18-10-18-05/"/>
+
     <arg name="display" default="true"/>
 
     <!-- The input reference frames -->
@@ -12,7 +14,7 @@
     <!-- "yrp" -->
     <!-- "pry2" -->
     <!-- "rpy2" -->
-    <arg name="rotation_flag" default="pry2" />
+    <arg name="rotation_flag" default="ryp2" />
 
     <arg name="left_image_topic"  default="stereo_pair/left/image_raw" />
     <arg name="right_image_topic" default="stereo_pair/right/image_raw" />
@@ -37,7 +39,8 @@
     <arg name="bot_right" default="16"/>
     <arg name="bot_left"  default="15"/>
 
-    <node name="stereo_calibration" pkg="cares_hand_eye_calibration" type="stereo_auto_calibration_node.py" output="screen">
+    <node name="stereo_auto_calibration_node" pkg="cares_hand_eye_calibration" type="stereo_auto_calibration_node.py" output="screen">
+        <param name="file_path"               value="$(arg file_path)" />
         <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
         <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
         <param name="tracking_base_frame"     value="$(arg tracking_base_frame)" />

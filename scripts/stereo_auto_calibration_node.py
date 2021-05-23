@@ -49,8 +49,8 @@ def move_arm(filepath):
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
     ur5 = MoveGroupPythonInterface()
-    # ee_frame = rospy.get_param('~robot_effector_frame')
-    ee_frame = "stereo_pair/left"
+    ee_frame = rospy.get_param('~robot_effector_frame')
+    # ee_frame = "stereo_pair/left"
     ur5.set_ee_link(ee_frame)
 
     print(ur5.get_current_pose())
@@ -59,8 +59,6 @@ def move_arm(filepath):
 
     #RIGHT HAND RULE control
     #CORRECTION SHOULD BE THE SAME FOR ALL OF THEM
-
-
     image_sampler = StereoDataSampler()
     d_roll  = image_sampler.d_roll
     d_pitch = image_sampler.d_pitch
@@ -85,103 +83,102 @@ def move_arm(filepath):
         print("failed to reach initial pose")
     print("current pose", init_pose) 
 
-    # init_pose  = helper.create_pose_msg(0, 1.0, 0.8)
-    # world_link = "world"
+    init_pose  = helper.create_pose_msg(0, 1.0, 0.8)
+    world_link = "world"
 
-    # start_poses = []
-    # increment = [[0,0],[0,0.07], [0,-0.07], [0.05, 0], [-0.05,0]]
+    start_poses = []
+    increment = [[0,0],[0,0.07], [0,-0.07], [0.05, 0], [-0.05,0]]
 
-    # for i in range(len(increment)):
-    #     start_pose = Pose()
-    #     start_pose.position.x = init_pose.position.x+increment[i][0]
-    #     start_pose.position.y = init_pose.position.y+increment[i][1]
-    #     start_pose.position.z = init_pose.position.z
-    #     start_pose.position.y -= 0.25
-    #     rotation_rpy = helper.initial_rotation()
-    #     q_orig = helper.quaternion_from_euler(rotation_rpy[0], rotation_rpy[1], rotation_rpy[2])
-    #     start_pose.orientation.x = q_orig[0]
-    #     start_pose.orientation.y = q_orig[1]
-    #     start_pose.orientation.z = q_orig[2]
-    #     start_pose.orientation.w = q_orig[3]
-    #     start_poses.append(start_pose)
+    for i in range(len(increment)):
+        start_pose = Pose()
+        start_pose.position.x = init_pose.position.x+increment[i][0]
+        start_pose.position.y = init_pose.position.y+increment[i][1]
+        start_pose.position.z = init_pose.position.z
+        start_pose.position.y -= 0.25
+        rotation_rpy = helper.initial_rotation()
+        q_orig = helper.quaternion_from_euler(rotation_rpy[0], rotation_rpy[1], rotation_rpy[2])
+        start_pose.orientation.x = q_orig[0]
+        start_pose.orientation.y = q_orig[1]
+        start_pose.orientation.z = q_orig[2]
+        start_pose.orientation.w = q_orig[3]
+        start_poses.append(start_pose)
 
-    # if ur5.go_to_pose_goal(start_poses[0]):
-    #     print("Moved to initial pose")
-    # else:
-    #     print("failed to reach initial pose")
-    # print("current pose", start_poses[0]) 
+    if ur5.go_to_pose_goal(start_poses[0]):
+        print("Moved to initial pose")
+    else:
+        print("failed to reach initial pose")
+    print("current pose", start_poses[0]) 
     
-    # #create path plan around the estimated position0
-    # dx = 2
-    # dz = 3
-    # radius  = 0.7
-    # step_x = 0.2
-    # step_z = 0.2
+    #create path plan around the estimated position0
+    dx = 2
+    dz = 3
+    radius  = 0.7
+    step_x = 0.2
+    step_z = 0.2
     
-    # count = 0
-    # for m in range(0, len(start_poses)):
-    #     for i in range(0,dx):
-    #          for j in range(0,dz):
-    #             for l in [-1,1]:
-    #                 for k in [-1,1]:
-    #                     #create path around estimated_pose
-    #                     pose_goal = Pose()
-    #                     pose_goal.position.x = start_poses[m].position.x - radius*math.sin(l*step_x*i)
-    #                     pose_goal.position.z = radius*math.cos(l*step_x*i)
-    #                     pose_goal.position.y = start_poses[m].position.y + radius*math.sin(k*step_z*j)
+    count = 0
+    for m in range(0, len(start_poses)):
+        for i in range(0,dx):
+             for j in range(0,dz):
+                for l in [-1,1]:
+                    for k in [-1,1]:
+                        #create path around estimated_pose
+                        pose_goal = Pose()
+                        pose_goal.position.x = start_poses[m].position.x - radius*math.sin(l*step_x*i)
+                        pose_goal.position.z = radius*math.cos(l*step_x*i)
+                        pose_goal.position.y = start_poses[m].position.y + radius*math.sin(k*step_z*j)
                         
-    #                     roll_offset = helper.rpy_to_quaternion(-step_z*j*k,0,0)
-    #                     yaw_offset  = helper.rpy_to_quaternion(0,0,-step_x*i*l)
+                        roll_offset = helper.rpy_to_quaternion(-step_z*j*k,0,0)
+                        yaw_offset  = helper.rpy_to_quaternion(0,0,-step_x*i*l)
 
-    #                     q = quaternion_multiply(yaw_offset, quaternion_multiply(roll_offset, q_orig))
-    #                     (roll, pitch , yaw ) = euler_from_quaternion(q)
-    #                     pose_goal.orientation.x =q[0]
-    #                     pose_goal.orientation.y =q[1]
-    #                     pose_goal.orientation.z =q[2]
-    #                     pose_goal.orientation.w =q[3]
+                        q = quaternion_multiply(yaw_offset, quaternion_multiply(roll_offset, q_orig))
+                        (roll, pitch , yaw ) = euler_from_quaternion(q)
+                        pose_goal.orientation.x =q[0]
+                        pose_goal.orientation.y =q[1]
+                        pose_goal.orientation.z =q[2]
+                        pose_goal.orientation.w =q[3]
 
-    #                     print("Moving to ",(pose_goal.position.x,pose_goal.position.y,pose_goal.position.z),(roll,pitch,yaw))
-    #                     if ur5.go_to_pose_goal(pose_goal):
-    #                         #########################LOGIC FOR TAKING IMAGES#################################
-    #                         image_sampler.sample_multiple_streams(rgb_image=True, depth_image=False, points=False, camera_info=False)
+                        print("Moving to ",(pose_goal.position.x,pose_goal.position.y,pose_goal.position.z),(roll,pitch,yaw))
+                        if ur5.go_to_pose_goal(pose_goal):
+                            #########################LOGIC FOR TAKING IMAGES#################################
+                            image_sampler.sample_multiple_streams(rgb_image=True, depth_image=False, points=False, camera_info=False)
                             
-    #                         sensor_timestamp = image_sampler.left_image_msg.header.stamp
-    #                         transform = tf_buffer.lookup_transform(world_link, ee_frame, sensor_timestamp, rospy.Duration(1.0))
-    #                         file_name = filepath+str(count)
+                            sensor_timestamp = image_sampler.left_image_msg.header.stamp
+                            transform = tf_buffer.lookup_transform(world_link, ee_frame, sensor_timestamp, rospy.Duration(1.0))
+                            file_name = filepath+str(count)
                             
-    #                         image_list.append((image_sampler.left_image, image_sampler.right_image, transform, file_name))
-    #                         image_sampler.save(file_name)
-    #                         helper.save_transform(file_name+"_transforms.yaml", transform)
-    #                         count +=1
-    #                         ############################################################
-    #                     else:
-    #                         print("Failed to reach pose")
+                            image_list.append((image_sampler.left_image, image_sampler.right_image, transform, file_name))
+                            image_sampler.save(file_name)
+                            helper.save_transform(file_name+"_transforms.yaml", transform)
+                            count +=1
+                            ############################################################
+                        else:
+                            print("Failed to reach pose")
 
-    #                     if rospy.is_shutdown():
-    #                         return
+                        if rospy.is_shutdown():
+                            return
                             
-    # print("moving back to home position")
-    # ur5.go_to_pose_goal(start_poses[0])
+    print("moving back to home position")
+    ur5.go_to_pose_goal(start_poses[0])
     return image_list
 
 def main():
     rospy.init_node('stereo_auto_calibration_node')
 
-    from_file = False;
     filepath = ""
+    filepath = rospy.get_param('~file_path', filepath)
     image_list = []
-    if from_file:
-        filepath = "/home/anyone/calibration_images/2021-05-18-10-18-05/"
+    if filepath is not "":
         image_list = loadData(filepath)
     else:
-        # now = datetime.now()
-        # now = now.strftime("%Y-%m-%d-%H-%M-%S")
-        # filepath = home +"/calibration_images/"+now+"/"
-        # import os
-        # if not os.path.exists(filepath):
-        #     os.makedirs(filepath)
+        now = datetime.now()
+        now = now.strftime("%Y-%m-%d-%H-%M-%S")
+        filepath = home +"/calibration_images/"+now+"/"
+        import os
+        if not os.path.exists(filepath):
+            os.makedirs(filepath)
         image_list = move_arm(filepath)
-    return
+        
     print("Saving data too: "+filepath)
 
     # Run calibration service

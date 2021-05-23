@@ -131,7 +131,7 @@ def save_transform(filename, transform):
 
 def read_transforms(f):
     with open(f) as file:
-        t_map = yaml.load(file)
+        t_map = yaml.load(file, Loader=yaml.Loader)
         t = TransformStamped()
         t.transform.translation.x = t_map["translation"]["x"]
         t.transform.translation.y = t_map["translation"]["y"]
