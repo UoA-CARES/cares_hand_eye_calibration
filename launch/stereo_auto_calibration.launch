@@ -13,7 +13,7 @@
     <!-- "yrp" -->
     <!-- "pry2" -->
     <!-- "rpy2" -->
-    <arg name="rotation_flag" default="pry2" />
+    <arg name="rotation_flag" default="ryp2" />
     <!-- <arg name="rotation_flag"         default="11" /> -->
 
     <arg name="left_image_topic"  default="stereo_pair/left/image_raw" />

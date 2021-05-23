@@ -179,6 +179,10 @@ class DepthDataSampler(object):
   def save(self, filepath):
     pass
 
+#     elif get_rotation_flag() == "ryp2":
+#         return [0,math.pi/2,math.pi/2] 
+
+# <arg name="rotation_flag" default="11" />
 class StereoDataSampler(DepthDataSampler):
   def __init__(self):
 
@@ -254,6 +258,7 @@ class DepthCameraDataSampler(DepthDataSampler):
     if self.xyzrgb is not None:
         self.save_xyzrgb(self.xyzrgb, filepath)
 
+# <arg name="rotation_flag"         default="11"/>
 class RealsenseDataSampler(DepthCameraDataSampler):
   def __init__(self):
     image_topic = rospy.get_param('~image_topic', "camera/color/image_raw")
@@ -274,6 +279,7 @@ class RealsenseDataSampler(DepthCameraDataSampler):
           d_yaw=90
         )      
 
+# <arg name="rotation_flag"         default="100"/>
 class ZividDataSampler(DepthCameraDataSampler):
   def __init__(self):
     image_topic = rospy.get_param('~image_topic', "zivid_camera/color/image_color")

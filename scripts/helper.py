@@ -57,7 +57,7 @@ def get_rotation_flag():
     # elif rotation_flag == 10:
     #     return "yrp"
     # elif rotation_flag == 11:
-    #     return "pry2"
+    #     return "ryp2"
     # elif rotation_flag == -100:
     #     return "rpy2"
     # else:
@@ -71,7 +71,7 @@ def quarternion_to_rpy(quaternion):
         return (r,y,p)
     elif get_rotation_flag() == "pry":
         return (p,r,y)
-    elif get_rotation_flag() == "pry2":
+    elif get_rotation_flag() == "ryp2":
         return (r,y,p)
     elif get_rotation_flag() == "ypr":
         return (y,p,r)
@@ -89,7 +89,7 @@ def rpy_to_quaternion(r,p,y):
         return quaternion_from_euler(p,r,y)
     elif get_rotation_flag() == "ypr":
         return quaternion_from_euler(y,p,r)
-    elif get_rotation_flag() == "pry2":
+    elif get_rotation_flag() == "ryp2":
         return quaternion_from_euler(r,y,p)
     elif get_rotation_flag() == "rpy2":
         return quaternion_from_euler(r,y,p)
@@ -105,7 +105,7 @@ def initial_rotation():
         return [0,0,math.pi/2]
     elif get_rotation_flag() == "ypr":
         return [0,math.pi/2,0]
-    elif get_rotation_flag() == "pry2":
+    elif get_rotation_flag() == "ryp2":
         return [0,math.pi/2,math.pi/2] 
     elif get_rotation_flag() == "rpy2":
         return [-math.pi,0,0] 

@@ -7,8 +7,9 @@ Panels:
         - /Global Options1
         - /MotionPlanning1/Scene Geometry1
         - /MotionPlanning1/Scene Robot1
+        - /TF1/Frames1
+        - /TF1/Tree1
         - /RobotModel1/Links1
-        - /PointCloud21
       Splitter Ratio: 0.7088235020637512
     Tree Height: 397
   - Class: rviz/Selection
@@ -369,7 +370,7 @@ Visualization Manager:
         back_wall:
           Value: true
         base:
-          Value: true
+          Value: false
         base_link:
           Value: true
         cables:
@@ -383,7 +384,7 @@ Visualization Manager:
         ground:
           Value: true
         pedestal:
-          Value: true
+          Value: false
         platform_link_1:
           Value: true
         platform_link_2:
@@ -673,7 +674,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.028528094291687
+      Distance: 2.0791149139404297
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -681,17 +682,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.005857179872691631
-        Y: 0.7854591608047485
-        Z: 0.7347750067710876
+        X: -0.4878629446029663
+        Y: 0.8316006660461426
+        Z: 0.46010351181030273
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0047969818115234
+      Pitch: 0.6347970962524414
       Target Frame: <Fixed Frame>
-      Yaw: 3.153172016143799
+      Yaw: 3.7481720447540283
     Saved: ~
 Window Geometry:
   Displays:
