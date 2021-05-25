@@ -25,17 +25,21 @@ from cares_msgs.srv import CalibrationService, ArucoDetect
 
 from move_group_python_interface import MoveGroupPythonInterface
 from handeye_calibrator import HandeyeCalibrator 
-from data_sampler import StereoDataSampler
-import helper as helper
+
+import cares_lib_ros.utils as utils
+from cares_lib_ros.data_sampler import StereoDataSampler
+
+# from data_sampler import data_sampler
+# import helper as helper
 
 from os.path import expanduser
 home = expanduser("~")
 
 def loadData(filepath):
     image_list = []
-    left_image, files  = helper.loadImages(filepath+"*left_rgb.png")
-    right_image, files = helper.loadImages(filepath+"*right_rgb.png")
-    transforms, files  = helper.load_transforms(filepath+"*transforms.yaml")
+    left_image, files  = utils.loadImages(filepath+"*left_rgb.png")
+    right_image, files = utils.loadImages(filepath+"*right_rgb.png")
+    transforms, files  = utils.load_transforms(filepath+"*transforms.yaml")
     assert len(left_image) == len(right_image) ==  len(transforms)
     for i in range(len(left_image)):
         file_name = filepath+str(i)+"_"
@@ -48,24 +52,43 @@ def move_arm(filepath):
     tf_buffer   = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
+    #Setup the move it interface - FUTURE will replace this for the platform_msgs action server
     ur5 = MoveGroupPythonInterface()
+    
+    #As we are moving the arm around without a calibrated sensor we use the ee_link to move the arm
     ee_frame = rospy.get_param('~robot_effector_frame')
-    # ee_frame = "stereo_pair/left"
     ur5.set_ee_link(ee_frame)
+    # The end effector link (body_link) has a different axis orientation than the sensor (optical_link) on the arm 
+    # See https://www.ros.org/reps/rep-0103.html for specific details on the axis definitions for body and sensors
+    # These hard coded rotations to the orienation on the ee_link will allow the rest of the code to operate as if we are pointing the sensor at the target
+    d_roll  = 0
+    d_pitch = math.pi/2.0
+    d_yaw   = math.pi/2.0
+    d_quaternion = quaternion_from_euler(d_roll, d_pitch, d_yaw)
+
+    print("Current Pose")
+    print(ur5.get_current_pose())
+
+    #Global link to align data too
     world_link = "world"
 
-    print(ur5.get_current_pose())
-    #DEAR FUTURE HENRY!
-
-    #RIGHT HAND RULE control
-    #CORRECTION SHOULD BE THE SAME FOR ALL OF THEM
+    #Image sampler that will collect the sensor data
     image_sampler = StereoDataSampler()
-    d_roll  = image_sampler.d_roll
-    d_pitch = image_sampler.d_pitch
-    d_yaw   = image_sampler.d_yaw
 
-    init_pose = helper.create_pose_msg(0, 1.0, 0.8)
+    #TODO extract this out via params
+    init_pose = utils.create_pose_msg(0, 0.75, 0.8, quaternion=d_quaternion)
     
+    print("Initial Pose")
+    print(init_pose)
+    if ur5.go_to_pose_goal(init_pose):
+        print("Moved to initial pose")
+    else:
+        print("failed to reach initial pose")
+
+    print("current pose") 
+    print(init_pose)
+
+    #TODO this entire path planning setup needs to be placed into cares_lib_ros/path_factory.py and made easier to read/adjust
     start_poses = []
     increment = [[0,0],[0,0.07], [0,-0.07], [0.05, 0], [-0.05,0]]
     for i in range(len(increment)):
@@ -73,27 +96,16 @@ def move_arm(filepath):
         start_pose.position.x = init_pose.position.x+increment[i][0]
         start_pose.position.y = init_pose.position.y+increment[i][1]
         start_pose.position.z = init_pose.position.z
-        start_pose.position.y -= 0.25
-        rotation_rpy = helper.initial_rotation()
-        q_orig = quaternion_from_euler(rotation_rpy[0], rotation_rpy[1], rotation_rpy[2])
-        start_pose.orientation.x = q_orig[0]
-        start_pose.orientation.y = q_orig[1]
-        start_pose.orientation.z = q_orig[2]
-        start_pose.orientation.w = q_orig[3]
+
+        start_pose.orientation.x = init_pose.orientation.x
+        start_pose.orientation.y = init_pose.orientation.y
+        start_pose.orientation.z = init_pose.orientation.z
+        start_pose.orientation.w = init_pose.orientation.w
         start_poses.append(start_pose)
 
-    if ur5.go_to_pose_goal(start_poses[0]):
-
-    if ur5.go_to_pose_goal(start_poses[0]):
-        print("Moved to initial pose")
-    else:
-        print("failed to reach initial pose")
-    print("current pose", start_poses[0]) 
-    
-    #create path plan around the estimated position0
     dx = 2
     dz = 3
-    radius  = 0.7
+    radius = 0.7
     step_x = 0.2
     step_z = 0.2
     
@@ -109,19 +121,21 @@ def move_arm(filepath):
                         pose_goal.position.z = radius*math.cos(l*step_x*i)
                         pose_goal.position.y = start_poses[m].position.y + radius*math.sin(k*step_z*j)
                         
-                        roll_offset = helper.rpy_to_quaternion(-step_z*j*k,0,0)
-                        yaw_offset  = helper.rpy_to_quaternion(0,0,-step_x*i*l)
+                        roll_offset = quaternion_from_euler(-step_z*j*k,0,0)
+                        yaw_offset  = quaternion_from_euler(0,-step_x*i*l,0)
 
-                        q = quaternion_multiply(yaw_offset, quaternion_multiply(roll_offset, q_orig))
+                        q = quaternion_multiply(yaw_offset, quaternion_multiply(roll_offset, d_quaternion))
                         (roll, pitch , yaw ) = euler_from_quaternion(q)
-                        pose_goal.orientation.x =q[0]
-                        pose_goal.orientation.y =q[1]
-                        pose_goal.orientation.z =q[2]
-                        pose_goal.orientation.w =q[3]
+                        pose_goal.orientation.x = q[0]
+                        pose_goal.orientation.y = q[1]
+                        pose_goal.orientation.z = q[2]
+                        pose_goal.orientation.w = q[3]
 
-                        print("Moving to ",(pose_goal.position.x,pose_goal.position.y,pose_goal.position.z),(roll,pitch,yaw))
+                        print("Moving to")
+                        print(pose_goal)
                         if ur5.go_to_pose_goal(pose_goal):
                             #########################LOGIC FOR TAKING IMAGES#################################
+                            time.sleep(1.0)#just to allow the shaking to stop
                             image_sampler.sample_multiple_streams(rgb_image=True, depth_image=False, points=False, camera_info=False)
                             
                             sensor_timestamp = image_sampler.left_image_msg.header.stamp
@@ -130,7 +144,7 @@ def move_arm(filepath):
                             
                             image_list.append((image_sampler.left_image, image_sampler.right_image, transform, file_name))
                             image_sampler.save(file_name)
-                            helper.save_transform(file_name+"_transforms.yaml", transform)
+                            utils.save_transform(file_name+"_transforms.yaml", transform)
                             count +=1
                             ############################################################
                         else:
@@ -140,7 +154,7 @@ def move_arm(filepath):
                             return
                             
     print("moving back to home position")
-    ur5.go_to_pose_goal(start_poses[0])
+    ur5.go_to_pose_goal(init_pose)
     return image_list
 
 def main():
@@ -149,7 +163,7 @@ def main():
     filepath = ""
     filepath = rospy.get_param('~file_path', filepath)
     image_list = []
-    if filepath is not "":
+    if filepath != "":
         image_list = loadData(filepath)
     else:
         now = datetime.now()
@@ -175,7 +189,7 @@ def main():
     # Rectify the images before sending them to the marker detector service
     images_left  = [img[0] for img in image_list]
     images_right = [img[1] for img in image_list]
-    images_left_rectified, images_right_rectified = helper.rectify_remap(images_left, images_right, stereo_info)
+    images_left_rectified, images_right_rectified = utils.rectify_images(images_left, images_right, stereo_info)
 
     # Setup Charuco detection service
     aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)

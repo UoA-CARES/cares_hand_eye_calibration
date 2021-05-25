@@ -19,6 +19,10 @@ Base package dependencies
 	a) cd ~/catkin_ws/src
 	b) git clone https://github.com/maraatech/platform_msgs
 
+4) Pull master version of cares_lib_ros
+	a) cd ~/catkin_ws/src
+	b) git clone https://github.com/UoA-CARES/cares_lib_ros.git
+
 4) Install VISP library (future will remove this dependancy to utilise opencv hand-eye calibration library)
 	a) https://visp-doc.inria.fr/doxygen/visp-daily/tutorial-install-ubuntu.html
 	b) cd ~/catkin_ws/src
