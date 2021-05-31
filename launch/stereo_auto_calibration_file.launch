@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="file_path" default="/home/anyone/calibration_images/2021-05-18-10-18-05/"/>
+    <arg name="file_path" default="/home/anyone/calibration_images/2021-05-28-10-08-49/"/>
 
     <arg name="display" default="true"/>
 
