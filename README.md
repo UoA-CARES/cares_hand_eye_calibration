@@ -1,5 +1,5 @@
 # CARES_hand_eye_calibration
-Hand Eye Calibration for Robot arms and RGB/RGBD cameras.
+Hand Eye Calibration for Robot arms and RGB/RGBD cameras. 
 
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -27,9 +27,17 @@ Base package dependencies
 	a) https://visp-doc.inria.fr/doxygen/visp-daily/tutorial-install-ubuntu.html
 	b) cd ~/catkin_ws/src
 	c) git clone https://github.com/lagadic/vision_visp.git
+```
 
-5) Install MoveIt (future will remove this dependancy to opreate via platform_msgs)
-	a) sudo apt install ros-noetic-moveit 
+### Calabration and Marker Services
+Hand eye calibration relies on other packages/services to conduct the stereo calibration and marker detection.\
+These can be replaced with different vairations by changing the respective service topics in the launch files.\
+The two below are the ones specifically designed for this package but are not the only pair/s that can be used - they rely on a charuco board as the calibration target.
+
+```
+1) Stereo Calibration (charuco) - https://github.com/UoA-CARES/stereo_calibration
+
+2) Marker Detection (aruco) - https://github.com/maraatech/aruco_detector
 ```
 
 ### Installing
