@@ -1,7 +1,5 @@
 import rospy
 import tf2_ros
-from visp_hand2eye_calibration.msg import TransformArray
-from visp_hand2eye_calibration.srv import compute_effector_camera_quick
 from handeye_calibration import HandeyeCalibration
 
 class HandeyeCalibrator(object):
