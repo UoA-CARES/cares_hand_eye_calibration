@@ -121,6 +121,25 @@ def move_arm(filepath):
     platform_client.send_goal(init_goal)
     return image_list
 
+# The stereo calibration produces a calibration to the optical frame, we need to the body frame
+# This is just a rigid rotation around the optical frame
+# See body and optical frame standard definitions - https://www.ros.org/reps/rep-0103.html
+def rotate_to_body_frame(transform):    
+    calibration = TransformStamped(transform=transform.transformation.transform)
+
+    calibration_rotation = utils.quaternion_to_array(calibration.transform.rotation)
+    # Invert conversion from body to opitcal frame orientation
+    optical_to_body = quaternion_from_euler(utils.deg_rad(-90), utils.deg_rad(0), utils.deg_rad(-90))
+    optical_to_body[3] = -optical_to_body[3]
+    
+    calibration_rotation = quaternion_multiply(calibration_rotation, optical_to_body)
+
+    calibration.transform.rotation.x = float(calibration_rotation[0])
+    calibration.transform.rotation.y = float(calibration_rotation[1])
+    calibration.transform.rotation.z = float(calibration_rotation[2])
+    calibration.transform.rotation.w = float(calibration_rotation[3])
+    return transformation
+
 def main():
     rospy.init_node('stereo_auto_calibration_node')
 
@@ -183,27 +202,10 @@ def main():
     print("Hand-eye calibration:")
     print(calibration.to_dict())
 
-
-    # <origin xyz="0 0 0" rpy="${-M_PI/2} 0 ${-M_PI/2}" />    
-
-    #TIDY UP INTO ROTATE FUNCTION
-    hand_to_optical_transform = calibration.transformation#transformStamped
-    
-    quaternion = hand_to_optical_transform.transform.rotation
-    quaternion = [quaternion.x, quaternion.y, quaternion.z, quaternion.w]
-
-    d2r = np.pi / 180.0
-    q = quaternion_from_euler(-90 * d2r, 0 * d2r, -90 * d2r)
-    q[3] = -q[3]
-    q = quaternion_multiply(quaternion, q)
-
-    calibration.transformation.transform.rotation.x = float(q[0])
-    calibration.transformation.transform.rotation.y = float(q[1])
-    calibration.transformation.transform.rotation.z = float(q[2])
-    calibration.transformation.transform.rotation.w = float(q[3])
-
     if calibration is not None:
         calibration.to_file(filepath[:-1], "stereo_handeye")
+
+    # rotate_to_body_frame
     
     print("Done calibration")
 
