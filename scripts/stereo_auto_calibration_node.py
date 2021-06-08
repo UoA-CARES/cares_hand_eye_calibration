@@ -182,7 +182,26 @@ def main():
     calibration = hand_eye_calibrator.compute_calibration()
     print("Hand-eye calibration:")
     print(calibration.to_dict())
+
+
+    # <origin xyz="0 0 0" rpy="${-M_PI/2} 0 ${-M_PI/2}" />    
+
+    #TIDY UP INTO ROTATE FUNCTION
+    hand_to_optical_transform = calibration.transformation#transformStamped
     
+    quaternion = hand_to_optical_transform.transform.rotation
+    quaternion = [quaternion.x, quaternion.y, quaternion.z, quaternion.w]
+
+    d2r = np.pi / 180.0
+    q = quaternion_from_euler(-90 * d2r, 0 * d2r, -90 * d2r)
+    q[3] = -q[3]
+    q = quaternion_multiply(quaternion, q)
+
+    calibration.transformation.transform.rotation.x = float(q[0])
+    calibration.transformation.transform.rotation.y = float(q[1])
+    calibration.transformation.transform.rotation.z = float(q[2])
+    calibration.transformation.transform.rotation.w = float(q[3])
+
     if calibration is not None:
         calibration.to_file(filepath[:-1], "stereo_handeye")
     
