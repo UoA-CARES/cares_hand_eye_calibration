@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- The input reference frames -->
+    <arg name="robot_base_frame"     default="world" />
+
+    <arg name="robot_effector_frame" default="flange" />
+    <arg name="tracking_base_frame"  default="stereo_pair/left_body_frame" />
+
+    <arg name="file_path"/>
+
+    <arg name="left_image_topic"  default="stereo_pair/left/image_raw" />
+    <arg name="right_image_topic" default="stereo_pair/right/image_raw" />
+
+    <arg name="board_config" 
+      default="$(find cares_hand_eye_calibration)/board_configs/uoa_hand_eye.yaml" />
+
+    <node name="multical_auto_calibration" pkg="cares_hand_eye_calibration"
+        type="multical_auto_calibration_node.py" output="screen">
+      
+      <param name="robot_base_frame" value="$(arg robot_base_frame)"/>
+      <param name="robot_effector_frame" value="$(arg robot_effector_frame)"/>
+
+      <param name="board_config" value="$(arg board_config)"/>
+      
+      <param name="left_image_topic" value="$(arg left_image_topic)"/>
+      <param name="right_image_topic" value="$(arg right_image_topic)"/>
+
+      <param name="right_image_topic" value="$(arg right_image_topic)"/>
+      <param name="file_path" value="$(arg file_path)"/>
+
+    </node>     
+
+</launch>
