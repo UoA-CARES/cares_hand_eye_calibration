@@ -36,7 +36,8 @@ def report_poses(hand_eye):
 
 
 def calibrate_images(file_path, files, scan, 
-  camera_names=["left", "right"], board_config=None):
+  camera_names=["left", "right"], board_config=None, 
+  optimize_reprojection=True, optimize_board=False):
   
   camera_images = struct(
     image_path =file_path, 
@@ -53,7 +54,7 @@ def calibrate_images(file_path, files, scan,
   boards = find_board_config(file_path, board_file=board_config)
 
   initialise_with_images(ws, boards, camera_images)
-  ws.calibrate("initial", boards=True)
+  ws.calibrate("initial", boards=optimize_board)
 
   ws.dump()
   ws.export(master=camera_names[0])
@@ -64,10 +65,11 @@ def calibrate_images(file_path, files, scan,
   ws.push_calibration("hand-eye initialised", hand_eye.calib)
   report_poses(hand_eye)
 
-  hand_eye = hand_eye.bundle_adjust()
-  hand_eye.report_error("reprojection hand-eye")
-  ws.push_calibration("hand-eye reproj", hand_eye.calib)
-  report_poses(hand_eye)
+  if optimize_reprojection:
+    hand_eye = hand_eye.bundle_adjust()
+    hand_eye.report_error("reprojection hand-eye")
+    ws.push_calibration("hand-eye reproj", hand_eye.calib)
+    report_poses(hand_eye)
      
   ws.dump()
 
