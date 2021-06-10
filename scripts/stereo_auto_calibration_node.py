@@ -122,6 +122,9 @@ def move_arm(filepath):
     platform_client.send_goal(init_goal)
     return image_list
 
+# The stereo calibration produces a calibration to the optical frame, we need to the body frame
+# This is just a rigid rotation around the optical frame
+# See body and optical frame standard definitions - https://www.ros.org/reps/rep-0103.html
 def rotate_to_body_frame(optical_frame_transform):
     # Invert conversion from body to opitcal frame orientation
     optical_frame_rotation = utils.quaternion_to_array(optical_frame_transform.transform.rotation)
@@ -195,15 +198,17 @@ def main():
 
     # Compute the calibration
     calibration = hand_eye_calibrator.compute_calibration()
+    hand_to_optical_transform  = calibration.transformation
+    hand_to_body_transform  = rotate_to_body_frame(hand_to_optical_transform)
+    calibration.transformation = hand_to_body_transform
+
     print("Hand-eye calibration:")
     print(calibration.to_dict())
 
-    hand_to_optical_transform  = calibration.transformation#transformStamped
-    optical_to_body_transform  = rotate_to_body_frame(hand_to_optical_transform)
-    calibration.transformation = optical_to_body_transform
-
     if calibration is not None:
         calibration.to_file(filepath[:-1], "stereo_handeye")
+
+    # rotate_to_body_frame
     
     print("Done calibration")
 
