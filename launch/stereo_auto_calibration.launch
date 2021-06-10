@@ -1,23 +1,17 @@
 <?xml version="1.0"?>
 <launch>
+    <!-- Default blank to do live calibration -->
+    <arg name="file_path" default=""/>
+
     <arg name="display" default="true"/>
 
     <!-- The input reference frames -->
     <arg name="robot_base_frame"     default="base_link" />
-    <arg name="robot_effector_frame" default="ee_link" />
-    <arg name="tracking_base_frame"  default="stereo_pair/left" />
+    <arg name="robot_effector_frame" default="stereo_pair/base_link" />
+    <arg name="tracking_base_frame"  default="stereo_pair/left_frame" />
 
-    <!-- Orientation of the sensor coordinate frame -->
-    <!-- "rpy" -->
-    <!-- "pry" -->
-    <!-- "yrp" -->
-    <!-- "pry2" -->
-    <!-- "rpy2" -->
-    <arg name="rotation_flag" default="ryp2" />
-    <!-- <arg name="rotation_flag"         default="11" /> -->
-
-    <arg name="left_image_topic"  default="stereo_pair/left/image_raw" />
-    <arg name="right_image_topic" default="stereo_pair/right/image_raw" />
+    <arg name="left_image_topic"  default="stereo_pair/left/image_color" />
+    <arg name="right_image_topic" default="stereo_pair/right/image_color" />
 
     <!--Charuco Board Parameters-->
     <arg name="board_width"   default="8"/><!--Number of corners-->
@@ -40,10 +34,10 @@
     <arg name="bot_left"  default="15"/>
 
     <node name="stereo_auto_calibration_node" pkg="cares_hand_eye_calibration" type="stereo_auto_calibration_node.py" output="screen">
+        <param name="file_path"               value="$(arg file_path)" />
         <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
         <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
         <param name="tracking_base_frame"     value="$(arg tracking_base_frame)" />
-	    <param name="rotation_flag"           value="$(arg rotation_flag)" />
 
         <param name="left_image_topic"  value="$(arg left_image_topic)" />
         <param name="right_image_topic" value="$(arg right_image_topic)" />

@@ -18,7 +18,6 @@ import tf
 from tf.transformations import quaternion_from_euler, euler_from_quaternion, quaternion_multiply
 import tf2_ros
 import tf2_geometry_msgs
-from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
 
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Pose
@@ -31,15 +30,15 @@ from platform_msgs.msg import PlatformGoalAction, PlatformGoalGoal
 
 import cares_lib_ros.utils as utils
 from cares_lib_ros.path_factory import PathFactory
-from cares_lib_ros.data_sampler import StereoDataSampler
+from cares_lib_ros.data_sampler import DepthDataSampler
 
 from os.path import expanduser
 home = expanduser("~")
 
 def loadData(filepath):
     image_list = []
-    left_image, files  = utils.loadImages(filepath+"*left_image_color.png")
-    right_image, files = utils.loadImages(filepath+"*right_image_color.png")
+    left_image, files  = utils.loadImages(filepath+"*left_rgb.png")
+    right_image, files = utils.loadImages(filepath+"*right_rgb.png")
     transforms, files  = utils.load_transforms(filepath+"*transforms.yaml")
     assert len(left_image) == len(right_image) == len(transforms)
     for i in range(len(left_image)):
@@ -61,7 +60,7 @@ def move_arm(filepath):
     world_link = "world"
 
     #Image sampler that will collect the sensor data
-    image_sampler = StereoDataSampler()
+    image_sampler = DepthDataSampler()
  
     # Creates the SimpleActionClient, passing the type of the action
     platform_server = rospy.get_param('~platform_server', 'server')
@@ -98,11 +97,10 @@ def move_arm(filepath):
         result = platform_client.get_state()
         print("Result is ", result)
 
-        if result == 3:# SUCCEEDED
+        if  result == 3:# SUCCEEDED
             #########################LOGIC FOR TAKING IMAGES#################################
             time.sleep(1.0)#just to allow the shaking to stop
-            # image_sampler.sample_multiple_streams(rgb_image=True, depth_image=False, points=False, camera_info=False)
-            image_sampler.sample_multiple_streams()
+            image_sampler.sample_multiple_streams(rgb_image=True, depth_image=True, points=True, camera_info=True)
 
             sensor_timestamp = image_sampler.left_image_msg.header.stamp
             transform = tf_buffer.lookup_transform(world_link, ee_frame, sensor_timestamp, rospy.Duration(1.0))
@@ -111,6 +109,7 @@ def move_arm(filepath):
             image_list.append((image_sampler.left_image, image_sampler.right_image, transform, file_name))
             image_sampler.save(file_name)
             utils.save_transform(file_name+"_transforms.yaml", transform)
+            count +=1
             ############################################################
         else:
             print("Failed to reach pose")
@@ -122,25 +121,8 @@ def move_arm(filepath):
     platform_client.send_goal(init_goal)
     return image_list
 
-# The stereo calibration produces a calibration to the optical frame, we need to the body frame
-# This is just a rigid rotation around the optical frame
-# See body and optical frame standard definitions - https://www.ros.org/reps/rep-0103.html
-def rotate_to_body_frame(optical_frame_transform):
-    # Invert conversion from body to opitcal frame orientation
-    optical_frame_rotation = utils.quaternion_to_array(optical_frame_transform.transform.rotation)
-    optical_to_body = quaternion_from_euler(utils.deg_rad(-90), utils.deg_rad(0), utils.deg_rad(-90))
-    optical_to_body[3] = -optical_to_body[3]
-    body_frame_rotation = quaternion_multiply(optical_frame_rotation, optical_to_body)    
-    
-    body_frame_transform = TransformStamped(transform=optical_frame_transform.transform)
-    body_frame_transform.transform.rotation.x = float(body_frame_rotation[0])
-    body_frame_transform.transform.rotation.y = float(body_frame_rotation[1])
-    body_frame_transform.transform.rotation.z = float(body_frame_rotation[2])
-    body_frame_transform.transform.rotation.w = float(body_frame_rotation[3])
-    return body_frame_transform
-
 def main():
-    rospy.init_node('stereo_auto_calibration_node')
+    rospy.init_node('depth_auto_calibration_node')
 
     filepath = ""
     filepath = rospy.get_param('~file_path', filepath)
@@ -158,21 +140,6 @@ def main():
 
     print("Saving data too: "+filepath)
 
-    # Run calibration service
-    print("Running Stereo Calibration Service")
-    calibration_service_name = 'stereo_calibration'
-    calibration_service = rospy.ServiceProxy(calibration_service_name, CalibrationService)
-    result = calibration_service(filepath)
-    stereo_info = result.stereo_info
-    
-    print("Stereo Information:")
-    print(stereo_info)
-    
-    # Rectify the images before sending them to the marker detector service
-    images_left  = [img[0] for img in image_list]
-    images_right = [img[1] for img in image_list]
-    images_left_rectified, images_right_rectified = utils.rectify_images(images_left, images_right, stereo_info)
-
     # Setup Charuco detection service
     aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)
     
@@ -180,12 +147,13 @@ def main():
     hand_eye_calibrator = HandeyeCalibrator()
 
     bridge = CvBridge()
-    for i in range(len(images_left_rectified)):
-        msg_left_rectified  = bridge.cv2_to_imgmsg(images_left_rectified[i], encoding="passthrough")
-        msg_right_rectified = bridge.cv2_to_imgmsg(images_right_rectified[i], encoding="passthrough")
+    for i in range(len()):
+        msg_image       = bridge.cv2_to_imgmsg(images[i], encoding="passthrough")
+        msg_depth_image = bridge.cv2_to_imgmsg(depth_images[i], encoding="passthrough")
+        camera_info     = utils.read_camerainfo(camera_infos[i])
 
         # Get transform from charuco detection service
-        aruco_transforms = aruco_detect(msg_left_rectified, msg_right_rectified, stereo_info)
+        aruco_transforms = aruco_detect(msg_image_left, msg_depth_image, camera_info)
         marker_id = 11
         if marker_id in aruco_transforms.ids:
             index = aruco_transforms.ids.index(marker_id)
@@ -198,17 +166,27 @@ def main():
 
     # Compute the calibration
     calibration = hand_eye_calibrator.compute_calibration()
-    hand_to_optical_transform  = calibration.transformation
-    hand_to_body_transform  = rotate_to_body_frame(hand_to_optical_transform)
-    calibration.transformation = hand_to_body_transform
-
     print("Hand-eye calibration:")
     print(calibration.to_dict())
 
+    #TIDY UP INTO ROTATE FUNCTION
+    hand_to_optical_transform = calibration.transformation#transformStamped
+    
+    quaternion = hand_to_optical_transform.transform.rotation
+    quaternion = [quaternion.x, quaternion.y, quaternion.z, quaternion.w]
+
+    d2r = np.pi / 180.0
+    q = quaternion_from_euler(-90 * d2r, 0 * d2r, -90 * d2r)
+    q[3] = -q[3]
+    q = quaternion_multiply(quaternion, q)
+
+    calibration.transformation.transform.rotation.x = float(q[0])
+    calibration.transformation.transform.rotation.y = float(q[1])
+    calibration.transformation.transform.rotation.z = float(q[2])
+    calibration.transformation.transform.rotation.w = float(q[3])
+
     if calibration is not None:
         calibration.to_file(filepath[:-1], "stereo_handeye")
-
-    # rotate_to_body_frame
     
     print("Done calibration")
 
