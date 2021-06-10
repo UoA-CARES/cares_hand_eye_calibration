@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+<<<<<<< HEAD
 from os import path
 import rospy
 import roslib
@@ -6,12 +7,15 @@ import math
 import time
 from datetime import datetime
 from scipy.spatial.transform import Rotation as R
+=======
+from cares_hand_eye_calibration.scripts.shared.arm_scan import acquire_images
+import rospy
+>>>>>>> main
 
 import numpy as np
-
-import cv2
 from cv_bridge import CvBridge
 
+<<<<<<< HEAD
 import tf
 import tf2_ros
 import tf2_geometry_msgs
@@ -19,20 +23,16 @@ import tf2_geometry_msgs
 import itertools
 
 
+=======
+>>>>>>> main
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Pose
 from cares_msgs.srv import CalibrationService, ArucoDetect
 
-from handeye_calibrator import HandeyeCalibrator 
-
-import actionlib
-from platform_msgs.msg import PlatformGoalAction, PlatformGoalGoal
-
 import cares_lib_ros.utils as utils
-from cares_lib_ros.path_factory import PathFactory
-from cares_lib_ros.data_sampler import StereoDataSampler
 
 from os.path import expanduser
+<<<<<<< HEAD
 home = expanduser("~")
 
 def loadData(filepath):
@@ -80,12 +80,27 @@ def move_arm(filepath):
     print("Goal transform:")
     print(utils.pose_to_rt(init_goal.target_pose))
     # print(goal)
+=======
 
-    print("Sending init position", init_goal)
-    platform_client.send_goal(init_goal)
-    platform_client.wait_for_result()
-    print("Moved to initial position moving to mapping phase")
+def detect_marker(stereo_info, marker_id = 11):
+  bridge = CvBridge()
+  aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)
 
+  def detect(image_pair):
+    msg_left_rectified  = bridge.cv2_to_imgmsg(image_pair[0], encoding="passthrough")
+    msg_right_rectified = bridge.cv2_to_imgmsg(image_pair[1], encoding="passthrough")
+
+          # Get transform from charuco detection service
+    aruco_transforms = aruco_detect(msg_left_rectified, msg_right_rectified, stereo_info)
+    if marker_id in aruco_transforms.ids:
+        index = aruco_transforms.ids.index(marker_id)
+        return aruco_transforms.transforms[index]
+
+  return detect
+>>>>>>> main
+
+
+<<<<<<< HEAD
         
     #TODO pull this variable for path selection out...
     total = 60
@@ -133,11 +148,14 @@ def move_arm(filepath):
     print("moving back to home position")
     platform_client.send_goal(init_goal)
     return image_list
+=======
+>>>>>>> main
 
 def main():
     rospy.init_node('stereo_auto_calibration_node')
     np.set_printoptions(precision=4, suppress=True)
 
+<<<<<<< HEAD
     filepath = rospy.get_param('~file_path', None)
     image_list = []
     if filepath is not None:
@@ -159,10 +177,23 @@ def main():
     # calibration_service = rospy.ServiceProxy(calibration_service_name, CalibrationService)
     # result = calibration_service(filepath)
     # stereo_info = result.stereo_info
+=======
+    file_path = expanduser(rospy.get_param('~file_path', None))
+    files, images = acquire_images(file_path)
+
+
+    # Run calibration service
+    print("Running Stereo Calibration Service")
+    calibration_service_name = 'stereo_calibration'
+    calibration_service = rospy.ServiceProxy(calibration_service_name, CalibrationService)
+    result = calibration_service(file_path)
+    stereo_info = result.stereo_info
+>>>>>>> main
     
     # print("Stereo Information:")
     # print(stereo_info)
     
+<<<<<<< HEAD
     # # Rectify the images before sending them to the marker detector service
     # images_left  = [img[0] for img in image_list]
     # images_right = [img[1] for img in image_list]
@@ -198,6 +229,16 @@ def main():
     
     # if calibration is not None:
     #     calibration.to_file(filepath[:-1], "stereo_handeye")
+=======
+    # Rectify the images before sending them to the marker detector service
+    images_left, images_right, transforms  = images["left"], images["right"], images["transforms"]
+    images_rectified = utils.rectify_images(images_left, images_right, stereo_info)
+    
+    detect = detect_marker(stereo_info)
+    marker_transforms = [detect(pair) for pair in zip (*images_rectified)]
+
+    # Compute the calibration
+>>>>>>> main
     
     # print("Done calibration")
 
