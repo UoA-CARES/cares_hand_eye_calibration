@@ -35,16 +35,26 @@ def report_poses(hand_eye):
     info(f"q(xyzw) = {q}, t = {t}")
 
 
-def calibrate_images(file_path, files, scan, 
+def to_gray(image_sets):
+  def to_gray(image):
+    if image.dims == 3 and image.shape[2] == 3:
+      image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    assert image.dims == 3 and image.shape[2] == 1, "expected grayscale or bgr image"
+    return image  
+
+  return [[to_gray(image) for image in images] for images in image_sets]
+
+def calibrate_images(file_path, files, images, scan, 
   camera_names=["left", "right"], board_config=None, 
   optimize_reprojection=True, optimize_board=False):
   
   camera_images = struct(
-    image_path =file_path, 
-    cameras    =camera_names, 
-    image_names=files['image_names'], 
-    images     =[scan[k] for k in camera_names],
-    filenames  =[files[k] for k in camera_names])
+    image_path = file_path, 
+    cameras    = camera_names, 
+    images      = to_gray([images[k] for k in camera_names]),
+    image_names = files['image_names'], 
+    filenames   = [files[k] for k in camera_names])
 
   ws = workspace.Workspace(file_path, "hand-eye")
 

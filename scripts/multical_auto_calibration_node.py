@@ -17,6 +17,7 @@ def main():
   file_path = expanduser(rospy.get_param('~file_path', None))
   files, images = acquire_images(file_path)
 
+
   calibrate_images(file_path, files, images, 
     board_config=rospy.get_param('~board_config', None))
 
@@ -25,3 +26,4 @@ if __name__ == '__main__':
         main()
     except rospy.ROSInterruptException:
         pass
+
