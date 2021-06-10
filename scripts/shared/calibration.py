@@ -35,42 +35,25 @@ def report_poses(hand_eye):
     info(f"q(xyzw) = {q}, t = {t}")
 
 
-def to_gray(image_sets):
-  def to_gray(image):
-    if image.dims == 3 and image.shape[2] == 3:
-      image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    assert image.dims == 3 and image.shape[2] == 1, "expected grayscale or bgr image"
-    return image  
+def calibrate_images(camera_images, gripper_wrt_base, board_config=None, 
+  optimize_reprojection=True, optimize_board=False, master="left"):
 
-  return [[to_gray(image) for image in images] for images in image_sets]
+  ws = workspace.Workspace(camera_images.image_path, "hand-eye")
 
-def calibrate_images(file_path, files, images, scan, 
-  camera_names=["left", "right"], board_config=None, 
-  optimize_reprojection=True, optimize_board=False):
-  
-  camera_images = struct(
-    image_path = file_path, 
-    cameras    = camera_names, 
-    images      = to_gray([images[k] for k in camera_names]),
-    image_names = files['image_names'], 
-    filenames   = [files[k] for k in camera_names])
-
-  ws = workspace.Workspace(file_path, "hand-eye")
-
-  log_file=path.join(file_path, "log.txt")
+  log_file=path.join(camera_images.image_path, "log.txt")
   setup_logging("DEBUG", [ws.log_handler], log_file)
 
-  boards = find_board_config(file_path, board_file=board_config)
+  boards = find_board_config(camera_images.image_path, board_file=board_config)
 
   initialise_with_images(ws, boards, camera_images)
   ws.calibrate("initial", boards=optimize_board)
 
   ws.dump()
-  ws.export(master=camera_names[0])
+  ws.export(master=master)
 
   calib = ws.latest_calibration
-  hand_eye = HandEyeCalibration.initialise(calib, scan["transforms"])
+  hand_eye = HandEyeCalibration.initialise(calib, gripper_wrt_base)
   hand_eye.report_error("hand-eye init")
   ws.push_calibration("hand-eye initialised", hand_eye.calib)
   report_poses(hand_eye)
