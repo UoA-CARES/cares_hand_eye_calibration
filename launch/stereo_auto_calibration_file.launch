@@ -1,75 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="file_path" default="/home/anyone/calibration_images/2021-06-08-11-01-37/"/>
+    <!--  -->
+    <arg name="file_path" default=" $(env HOME)/calibration_images/2021-06-10-14-28-10/"/>
 
-    <arg name="display" default="true"/>
-
-    <!-- The input reference frames -->
-    <arg name="robot_base_frame"     default="base_link" />
-    <arg name="robot_effector_frame" default="ee_link" />
-    <arg name="tracking_base_frame"  default="stereo_pair/left" />
-
-    <!-- "rpy" -->
-    <!-- "pry" -->
-    <!-- "yrp" -->
-    <!-- "pry2" -->
-    <!-- "rpy2" -->
-    <arg name="rotation_flag" default="ryp2" />
-
-    <arg name="left_image_topic"  default="stereo_pair/left/image_raw" />
-    <arg name="right_image_topic" default="stereo_pair/right/image_raw" />
-
-    <!--Charuco Board Parameters-->
-    <arg name="board_width"   default="8"/><!--Number of corners-->
-    <arg name="board_height"  default="5"/><!--Number of corners-->
-
-    <arg name="square_length" default="45"/><!--mm-->
-    <arg name="marker_length" default="23.0"/><!--mm-->
-
-    <arg name="image_width"  default="1936"/>
-    <arg name="image_height" default="1216"/>
-    
-    <!--1 Charuco-->
-    <arg name="method" default="1"/>
-
-    <!-- Aruco Diamond IDs -->
-    <arg name="centre"    default="11"/>
-    <arg name="top_left"  default="6"/>
-    <arg name="top_right" default="7"/>
-    <arg name="bot_right" default="16"/>
-    <arg name="bot_left"  default="15"/>
-
-    <node name="stereo_auto_calibration_node" pkg="cares_hand_eye_calibration" type="stereo_auto_calibration_node.py" output="screen">
-        <param name="file_path"               value="$(arg file_path)" />
-        <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
-        <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
-        <param name="tracking_base_frame"     value="$(arg tracking_base_frame)" />
-        <param name="rotation_flag"           value="$(arg rotation_flag)" />
-
-        <param name="left_image_topic"  value="$(arg left_image_topic)" />
-        <param name="right_image_topic" value="$(arg right_image_topic)" />
-    </node>
-         
-    <include file="$(find stereo_calibration)/launch/service_stereo_calibration.launch" >\
-        <arg name="board_width"   value="$(arg board_width)"/>
-        <arg name="board_height"  value="$(arg board_height)"/>
-        <arg name="square_length" value="$(arg square_length)"/>
-        <arg name="image_width"   value="$(arg image_width)"/>
-        <arg name="image_height"  value="$(arg image_height)"/>
-        <arg name="method"        value="$(arg method)"/>
-        <arg name="marker_length" value="$(arg marker_length)"/>
-    </include>    
-
-    <include file="$(find aruco_detector)/launch/stereo_diamond_detector_service.launch" > 
-        <arg name="display"   value="$(arg display)"/> 
-        <arg name="centre"    value="$(arg centre)"/>
-        <arg name="top_left"  value="$(arg top_left)"/>
-        <arg name="top_right" value="$(arg top_right)"/>
-        <arg name="bot_right" value="$(arg bot_right)"/>
-        <arg name="bot_left"  value="$(arg bot_left)"/>
+    <include file="$(find cares_hand_eye_calibration)/launch/stereo_auto_calibration.launch" > 
+        <arg name="file_path" value="$(arg file_path)"/>        
     </include>
-    
-    <node name="hand_eye_solver" pkg="visp_hand2eye_calibration" type="visp_hand2eye_calibration_calibrator">
-        <remap from="/compute_effector_camera_quick" to="compute_effector_camera_quick"/>
-    </node>
 </launch>

@@ -18,6 +18,7 @@ import tf
 from tf.transformations import quaternion_from_euler, euler_from_quaternion, quaternion_multiply
 import tf2_ros
 import tf2_geometry_msgs
+from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
 
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Pose
@@ -37,8 +38,8 @@ home = expanduser("~")
 
 def loadData(filepath):
     image_list = []
-    left_image, files  = utils.loadImages(filepath+"*left_rgb.png")
-    right_image, files = utils.loadImages(filepath+"*right_rgb.png")
+    left_image, files  = utils.loadImages(filepath+"*left_image_color.png")
+    right_image, files = utils.loadImages(filepath+"*right_image_color.png")
     transforms, files  = utils.load_transforms(filepath+"*transforms.yaml")
     assert len(left_image) == len(right_image) == len(transforms)
     for i in range(len(left_image)):
@@ -97,10 +98,11 @@ def move_arm(filepath):
         result = platform_client.get_state()
         print("Result is ", result)
 
-        if  result == 3:# SUCCEEDED
+        if result == 3:# SUCCEEDED
             #########################LOGIC FOR TAKING IMAGES#################################
             time.sleep(1.0)#just to allow the shaking to stop
-            image_sampler.sample_multiple_streams(rgb_image=True, depth_image=False, points=False, camera_info=False)
+            # image_sampler.sample_multiple_streams(rgb_image=True, depth_image=False, points=False, camera_info=False)
+            image_sampler.sample_multiple_streams()
 
             sensor_timestamp = image_sampler.left_image_msg.header.stamp
             transform = tf_buffer.lookup_transform(world_link, ee_frame, sensor_timestamp, rospy.Duration(1.0))
@@ -109,7 +111,6 @@ def move_arm(filepath):
             image_list.append((image_sampler.left_image, image_sampler.right_image, transform, file_name))
             image_sampler.save(file_name)
             utils.save_transform(file_name+"_transforms.yaml", transform)
-            count +=1
             ############################################################
         else:
             print("Failed to reach pose")
@@ -120,6 +121,20 @@ def move_arm(filepath):
     print("moving back to home position")
     platform_client.send_goal(init_goal)
     return image_list
+
+def rotate_to_body_frame(optical_frame_transform):
+    # Invert conversion from body to opitcal frame orientation
+    optical_frame_rotation = utils.quaternion_to_array(optical_frame_transform.transform.rotation)
+    optical_to_body = quaternion_from_euler(utils.deg_rad(-90), utils.deg_rad(0), utils.deg_rad(-90))
+    optical_to_body[3] = -optical_to_body[3]
+    body_frame_rotation = quaternion_multiply(optical_frame_rotation, optical_to_body)    
+    
+    body_frame_transform = TransformStamped(transform=optical_frame_transform.transform)
+    body_frame_transform.transform.rotation.x = float(body_frame_rotation[0])
+    body_frame_transform.transform.rotation.y = float(body_frame_rotation[1])
+    body_frame_transform.transform.rotation.z = float(body_frame_rotation[2])
+    body_frame_transform.transform.rotation.w = float(body_frame_rotation[3])
+    return body_frame_transform
 
 def main():
     rospy.init_node('stereo_auto_calibration_node')
@@ -183,24 +198,9 @@ def main():
     print("Hand-eye calibration:")
     print(calibration.to_dict())
 
-
-    # <origin xyz="0 0 0" rpy="${-M_PI/2} 0 ${-M_PI/2}" />    
-
-    #TIDY UP INTO ROTATE FUNCTION
-    hand_to_optical_transform = calibration.transformation#transformStamped
-    
-    quaternion = hand_to_optical_transform.transform.rotation
-    quaternion = [quaternion.x, quaternion.y, quaternion.z, quaternion.w]
-
-    d2r = np.pi / 180.0
-    q = quaternion_from_euler(-90 * d2r, 0 * d2r, -90 * d2r)
-    q[3] = -q[3]
-    q = quaternion_multiply(quaternion, q)
-
-    calibration.transformation.transform.rotation.x = float(q[0])
-    calibration.transformation.transform.rotation.y = float(q[1])
-    calibration.transformation.transform.rotation.z = float(q[2])
-    calibration.transformation.transform.rotation.w = float(q[3])
+    hand_to_optical_transform  = calibration.transformation#transformStamped
+    optical_to_body_transform  = rotate_to_body_frame(hand_to_optical_transform)
+    calibration.transformation = optical_to_body_transform
 
     if calibration is not None:
         calibration.to_file(filepath[:-1], "stereo_handeye")
