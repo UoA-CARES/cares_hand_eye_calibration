@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Default blank to do live calibration -->
+    <arg name="file_path" default=""/>
+
+    <arg name="sensor" default=""/>
+
+    <arg name="display" default="true"/>
+
+    <!-- The input reference frames -->
+    <arg name="robot_base_frame"     default="" />
+    <arg name="robot_effector_frame" default="" />
+    <arg name="tracking_base_frame"  default="" />
+
+    <!-- Stereo camera topics -->
+    <!-- NOTE: precalibration we only have left and right images to work with -->
+    <arg name="left_image_topic"  default="" />
+    <arg name="right_image_topic" default="" />
+
+    <!-- Depth camera topics -->
+    <!-- NOTE: as the depth camera is precalibrated we can jump straight to depth data -->
+    <arg name="image_topic"       default="" />
+    <arg name="depth_image_topic" default="" />
+    <arg name="camera_info_topic" default="" />
+    
+    <!-- Aruco Diamond IDs -->
+    <arg name="centre"    default="11"/>
+    <arg name="top_left"  default="6"/>
+    <arg name="top_right" default="7"/>
+    <arg name="bot_right" default="16"/>
+    <arg name="bot_left"  default="15"/>
+
+    <node name="handeye_calibration_node" pkg="cares_hand_eye_calibration" type="handeye_calibration_node.py" output="screen">
+        <param name="file_path"               value="$(arg file_path)" />
+        <param name="sensor"                  value="$(arg sensor)" />
+        <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
+        <param name="tracking_base_frame"     value="$(arg tracking_base_frame)" />
+
+        <!-- Sensor Topics -->
+        <param name="left_image_topic"  value="$(arg left_image_topic)" />
+        <param name="right_image_topic" value="$(arg right_image_topic)" />
+        <param name="image_topic"       value="$(arg image_topic)" />
+        <param name="depth_image_topic" value="$(arg depth_image_topic)" />
+        <param name="camera_info_topic" value="$(arg camera_info_topic)" />
+    </node>
+        
+    <include file="$(find aruco_detector)/launch/stereo_diamond_detector_service.launch" > 
+        <arg name="display"   value="$(arg display)"/> 
+        <arg name="centre"    value="$(arg centre)"/>
+        <arg name="top_left"  value="$(arg top_left)"/>
+        <arg name="top_right" value="$(arg top_right)"/>
+        <arg name="bot_right" value="$(arg bot_right)"/>
+        <arg name="bot_left"  value="$(arg bot_left)"/>
+    </include>
+    
+    <node name="hand_eye_solver" pkg="visp_hand2eye_calibration" type="visp_hand2eye_calibration_calibrator">
+        <remap from="/compute_effector_camera_quick" to="compute_effector_camera_quick"/>
+    </node>
+</launch>

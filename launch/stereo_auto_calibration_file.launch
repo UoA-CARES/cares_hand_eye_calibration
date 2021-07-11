@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <!--  -->
-    <arg name="file_path" default=" $(env HOME)/calibration_images/2021-06-10-14-28-10/"/>
-
-    <include file="$(find cares_hand_eye_calibration)/launch/stereo_auto_calibration.launch" > 
-        <arg name="file_path" value="$(arg file_path)"/>        
-    </include>
-</launch>

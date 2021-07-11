@@ -10,7 +10,7 @@
     <arg name="tracking_marker_frame" default="zivid_camera_aruco_0" />
 
     <arg name="ns" default="zivid_camera"/>
-    <arg name="rotation_flag"         default="100"/>
+    <arg name="rotation_flag" default="100"/>
 
     <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera">
         <param name="use_save"       value="false"/>

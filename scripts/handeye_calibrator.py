@@ -2,7 +2,164 @@ import rospy
 import tf2_ros
 from visp_hand2eye_calibration.msg import TransformArray
 from visp_hand2eye_calibration.srv import compute_effector_camera_quick
+from tf.transformations import quaternion_from_euler, euler_from_quaternion, quaternion_multiply
+
 from handeye_calibration import HandeyeCalibration
+from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
+
+import cv2
+from cv_bridge import CvBridge
+
+from cares_msgs.srv import CalibrationService, ArucoDetect
+import cares_lib_ros.utils as utils
+from cares_lib_ros.data_sampler import StereoDataSampler, DepthDataSampler
+
+class Calibrator(object):
+    def __init__(self, image_sampler):
+        self.image_sampler = image_sampler
+        self.image_list = []
+
+        # Setup Charuco detection service
+        self.aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)
+
+        self.bridge = CvBridge()
+
+    def calibrate(self, filepath):
+        print("Running Hand-Eye Calibrating")
+        
+        # Setup hand eye calibrator
+        hand_eye_calibrator = HandeyeCalibrator()
+
+        bridge = CvBridge()
+        for i in range(len(self.image_list)):
+            # Get transform from charuco detection service
+            aruco_transforms = self.detect_aruco(self.image_list[i])
+            marker_id = 11
+            if marker_id in aruco_transforms.ids:
+                index = aruco_transforms.ids.index(marker_id)
+                transform = aruco_transforms.transforms[index]
+                sample = {'robot':self.image_list[i][3],'optical':transform}
+                print(sample)
+                hand_eye_calibrator.collect_samples(sample)
+            else:
+                print("Marker not detected")
+
+        # Compute the calibration
+        calibration = hand_eye_calibrator.compute_calibration()
+        hand_to_optical_transform  = calibration.transformation
+        hand_to_body_transform  = self.rotate_to_body_frame(hand_to_optical_transform)
+        calibration.transformation = hand_to_body_transform
+
+        print("Hand-eye calibration:")
+        print(calibration.to_dict())
+
+        if calibration is not None:
+            calibration.to_file(filepath[:-1], "handeye_calibration")
+
+    def collect_samples(self, file_name, tf_buffer):
+        self.image_sampler.sample_multiple_streams()
+
+        sensor_timestamp = self.image_sampler.time_stamp
+        transform = tf_buffer.lookup_transform(world_link, ee_frame, sensor_timestamp, rospy.Duration(1.0))
+
+        self.image_sampler.save(file_name)
+        utils.save_transform(file_name+"_transforms.yaml", transform)
+
+        self.image_list.append(self.sample_data() + [transform, file_name])
+
+    # The stereo calibration produces a calibration to the optical frame, we need to the body frame
+    # This is just a rigid rotation around the optical frame
+    # See body and optical frame standard definitions - https://www.ros.org/reps/rep-0103.html
+    def rotate_to_body_frame(self, optical_frame_transform):
+        # Invert conversion from body to opitcal frame orientation
+        optical_frame_rotation = utils.quaternion_to_array(optical_frame_transform.transform.rotation)
+        optical_to_body = quaternion_from_euler(utils.deg_rad(-90), utils.deg_rad(0), utils.deg_rad(-90))
+        optical_to_body[3] = -optical_to_body[3]
+        body_frame_rotation = quaternion_multiply(optical_frame_rotation, optical_to_body)    
+        
+        body_frame_transform = TransformStamped(transform=optical_frame_transform.transform)
+        body_frame_transform.transform.rotation.x = float(body_frame_rotation[0])
+        body_frame_transform.transform.rotation.y = float(body_frame_rotation[1])
+        body_frame_transform.transform.rotation.z = float(body_frame_rotation[2])
+        body_frame_transform.transform.rotation.w = float(body_frame_rotation[3])
+        return body_frame_transform
+
+    def load_data(self, filepath):
+        pass
+
+    def detect_aruco(self, image_data):
+        pass
+
+    def sample_data(self):
+        pass
+
+class StereoCalibrator(Calibrator):
+    def __init__(self):
+        image_sampler = StereoDataSampler()
+        super(StereoCalibrator, self).__init__(
+            image_sampler=image_sampler
+            )
+
+    def calibrate(self, filepath):
+        print("Running Stereo Calibration Service")
+        calibration_service_name = 'stereo_calibration'
+        calibration_service = rospy.ServiceProxy(calibration_service_name, CalibrationService)
+        result = calibration_service(filepath)
+        stereo_info = result.stereo_info
+        
+        print("Stereo Information:")
+        print(stereo_info)
+
+        print("Rectifying Images")
+        # Rectify the images before sending them to the marker detector service
+        images_left  = [img[0] for img in self.image_list]
+        images_right = [img[1] for img in self.image_list]
+        images_left_rectified, images_right_rectified = utils.rectify_images(images_left, images_right, stereo_info)
+
+        for i in range(len(self.image_list)):
+            self.image_list[i][0] = images_left_rectified[i]
+            self.image_list[i][1] = images_right_rectified[i]
+            self.image_list[i][2] = stereo_info
+
+        super(StereoCalibrator, self).calibrate(filepath)
+
+    def load_data(self, filepath):
+        self.image_list = []
+        left_image, files  = utils.loadImages(filepath+"*left_image_color.png")
+        right_image, files = utils.loadImages(filepath+"*right_image_color.png")
+        transforms, files  = utils.load_transforms(filepath+"*transforms.yaml")
+        assert len(left_image) == len(right_image) == len(transforms)
+        for i in range(len(left_image)):
+            file_name = filepath+str(i)+"_"
+            self.image_list.append([left_image[i], right_image[i], None, transforms[i], file_name])
+
+    def detect_aruco(self, image_data):
+        msg_left_rectified  = self.bridge.cv2_to_imgmsg(image_data[0], encoding="passthrough")
+        msg_right_rectified = self.bridge.cv2_to_imgmsg(image_data[1], encoding="passthrough")
+        stereo_info = image_data[2]
+        return self.aruco_detect(msg_left_rectified, msg_right_rectified, stereo_info, None, None, None)
+
+    def sample_data(self):
+        return [self.image_sampler.left_image, self.image_sampler.right_image, None]
+
+class DepthCalibrator(Calibrator):
+    def __init__(self):
+        image_sampler = DepthDataSampler()
+        super(DepthCalibrator, self).__init__(
+            image_sampler=image_sampler
+            )
+
+    def load_data(self, filepath):
+        pass
+
+    def detect_aruco(self, image_data):
+        msg_image       = self.bridge.cv2_to_imgmsg(image_data[0], encoding="passthrough")
+        msg_depth_image = self.bridge.cv2_to_imgmsg(image_data[1], encoding="passthrough")
+        camera_info = image_data[2]
+        return self.aruco_detect(None, None, None, msg_image, msg_depth_image, camera_info)
+
+    def sample_data(self):
+        return [self.image_sampler.image, self.image_sampler.depth_image, self.image_sampler.camera_info]
 
 class HandeyeCalibrator(object):
     """
