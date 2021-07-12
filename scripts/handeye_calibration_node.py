@@ -82,10 +82,9 @@ def collect_data_samples(filepath, sensor_calibrator):
         print("Result is ", result)
 
         if result == 3:# SUCCEEDED
-            #########################LOGIC FOR TAKING IMAGES#################################
             time.sleep(1.0)#just to allow the shaking to stop
             file_name = filepath+str(count)
-            sensor_calibrator.collect_samples(file_name, tf_buffer)
+            sensor_calibrator.collect_samples(file_name, world_link, ee_frame, tf_buffer)
         else:
             print("Failed to reach pose")
 

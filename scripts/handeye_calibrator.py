@@ -56,7 +56,7 @@ class Calibrator(object):
         if calibration is not None:
             calibration.to_file(filepath[:-1], "handeye_calibration")
 
-    def collect_samples(self, file_name, tf_buffer):
+    def collect_samples(self, file_name, world_link, ee_frame, tf_buffer):
         self.image_sampler.sample_multiple_streams()
 
         sensor_timestamp = self.image_sampler.time_stamp
