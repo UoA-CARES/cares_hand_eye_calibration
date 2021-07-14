@@ -57,3 +57,42 @@ catkin_make
 
 ## Running
 This package is intended to be called as part of the base platform bring up setup
+
+### How to setup on your base platform
+The launch files stereo_auto_calibration.launch and depth_auto_calibration.launch can be included in your primary robot calibration launch file stored in your robots bringup package - depending on if it is a stereo camera or depth sensor. An example of this with the "your_robot" platform using a stereo pair is shown below which would be placed within "your_robot_bringup" package.
+
+You will also need to run "your_robot" control - follow the instructions in the given robot's README file to start the robot's control.
+
+```xml
+<?xml version="1.0" ?>
+<launch>
+	<arg name="robot_base_frame"      default="base_link" />
+	<arg name="robot_effector_frame"  default="your_robot_sensor/base_link" />
+	<arg name="tracking_base_frame"   default="your_robot_sensor/your_robot_sensor_frame"/>
+
+	<arg name="sensor_topics" default="$(find your_robot_bringup)/config/sensors_calibration.yaml"/>
+
+	<!--Charuco Board Parameters-->
+	<arg name="board_width"   default="8"/><!--Number of corners-->
+	<arg name="board_height"  default="5"/><!--Number of corners-->
+
+	<arg name="square_length" default="45"/><!--mm-->
+	<arg name="marker_length" default="23.0"/><!--mm--> 
+
+	<arg name="image_width"  default="2464"/>
+	<arg name="image_height" default="2056"/>
+
+	<!-- Diamond Marker IDs -->
+	<arg name="centre"    default="11"/>
+	<arg name="top_left"  default="6"/>
+	<arg name="top_right" default="7"/>
+	<arg name="bot_right" default="16"/>
+	<arg name="bot_left"  default="15"/>
+
+	<include file="$(find cares_hand_eye_calibration)/launch/stereo_auto_calibration.launch" pass_all_args="true">
+	 
+	</include>
+</launch>
+
+```
+
