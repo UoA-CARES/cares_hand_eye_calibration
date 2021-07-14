@@ -1,0 +1,7 @@
+left_image_topic: "" 
+right_image_topic: "" 
+image_topic: ""
+depth_image_topic: ""
+camera_info_topic: ""
+xyzrgb_topic: ""
+sensor_link: ""

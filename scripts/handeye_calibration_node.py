@@ -24,7 +24,7 @@ from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Pose
 from cares_msgs.srv import CalibrationService, ArucoDetect
 
-from handeye_calibrator import HandeyeCalibrator, StereoCalibrator, DepthCalibrator
+from handeye_calibrator import HandeyeCalibrator, StereoCalibrator, DepthCalibrator, CalibratorFactory
 
 import actionlib
 from platform_msgs.msg import PlatformGoalAction, PlatformGoalGoal
@@ -107,13 +107,10 @@ def main():
     rospy.init_node('stereo_auto_calibration_node')
 
     sensor = rospy.get_param('~sensor') # 'depth' 'stereo'
-    if sensor == 'depth':
-        sensor_calibrator = DepthCalibrator()
-    elif sensor == 'stereo':
-        sensor_calibrator = StereoCalibrator()
-    else:
-        print("Sensor not defined: "+str(sensor))
-        return
+    sensor_calibrator = CalibratorFactory.create_calibrator(sensor)
+
+    if sensor_calibrator == None:
+        print("Undefined Sensor Type: "+str(sensor))
 
     filepath = ""
     filepath = rospy.get_param('~file_path', filepath)

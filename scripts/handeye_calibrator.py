@@ -12,7 +12,7 @@ from cv_bridge import CvBridge
 
 from cares_msgs.srv import CalibrationService, ArucoDetect
 import cares_lib_ros.utils as utils
-from cares_lib_ros.data_sampler import StereoDataSampler, DepthDataSampler
+from cares_lib_ros.data_sampler import DataSamplerFactory, DepthDataSampler, StereoDataSampler
 
 class Calibrator(object):
     def __init__(self, image_sampler):
@@ -94,8 +94,7 @@ class Calibrator(object):
         pass
 
 class StereoCalibrator(Calibrator):
-    def __init__(self):
-        image_sampler = StereoDataSampler()
+    def __init__(self, image_sampler):
         super(StereoCalibrator, self).__init__(
             image_sampler=image_sampler
             )
@@ -143,8 +142,7 @@ class StereoCalibrator(Calibrator):
         return [self.image_sampler.left_image, self.image_sampler.right_image, None]
 
 class DepthCalibrator(Calibrator):
-    def __init__(self):
-        image_sampler = DepthDataSampler()
+    def __init__(self, image_sampler):
         super(DepthCalibrator, self).__init__(
             image_sampler=image_sampler
             )
@@ -160,6 +158,20 @@ class DepthCalibrator(Calibrator):
 
     def sample_data(self):
         return [self.image_sampler.image, self.image_sampler.depth_image, self.image_sampler.camera_info]
+
+
+class CalibratorFactory(object):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def create_calibrator(sensor):
+        sensor_sampler = DataSamplerFactory.create_datasampler(sensor)
+        if isinstance(sensor_sampler, DepthDataSampler):
+            return DepthCalibrator(sensor_sampler)
+        elif isinstance(sensor_sampler, StereoDataSampler):
+            return StereoCalibrator(sensor_sampler)
+        return None
 
 class HandeyeCalibrator(object):
     """

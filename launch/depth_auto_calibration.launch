@@ -3,18 +3,16 @@
     <!-- Default blank to do live calibration -->
     <arg name="file_path" default=""/>
 
+    <arg name="sensor" default=""/>
+    <!-- NOTE: as the depth camera is precalibrated we can jump straight to depth data -->
+    <arg name="sensor_topics" default="$(find cares_hand_eye_calibration)/config/depth.yaml"/>
+
     <arg name="display" default="true"/>
 
     <!-- The input reference frames -->
     <arg name="robot_base_frame"     default="base_link" />
     <arg name="robot_effector_frame" default="stereo_pair/base_link" />
     <arg name="tracking_base_frame"  default="stereo_pair/left_frame" />
-
-    <!-- Depth camera topics -->
-    <!-- NOTE: as the depth camera is precalibrated we can jump straight to depth data -->
-    <arg name="image_topic"       default="" />
-    <arg name="depth_image_topic" default="" />
-    <arg name="camera_info_topic" default="" />
 
     <!-- Aruco Diamond IDs -->
     <arg name="centre"    default="11"/>
@@ -24,6 +22,5 @@
     <arg name="bot_left"  default="15"/>
 
     <include file="$(find cares_hand_eye_calibration)/launch/auto_calibration.launch" pass_all_args="true"> 
-        <arg name="sensor" value="depth"/>
     </include> 
 </launch>

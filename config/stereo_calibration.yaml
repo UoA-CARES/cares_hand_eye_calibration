@@ -1,0 +1,7 @@
+left_image_topic: "stereo_pair/left/image_color" 
+right_image_topic: "stereo_pair/right/image_color" 
+image_topic: ""
+depth_image_topic: ""
+camera_info_topic: ""
+xyzrgb_topic: ""
+sensor_link: ""
