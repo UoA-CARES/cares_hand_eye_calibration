@@ -54,7 +54,7 @@ class Calibrator(object):
         print(calibration.to_dict())
 
         if calibration is not None:
-            calibration.to_file(filepath[:-1], "handeye_calibration")
+            calibration.to_file(filepath[:-1], self.image_sampler.sensor_name+"_handeye_calibration")
 
     def collect_samples(self, file_name, world_link, ee_frame, tf_buffer):
         self.image_sampler.sample_multiple_streams()
