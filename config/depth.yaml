@@ -1,5 +1,7 @@
-image_topic: ""
-depth_image_topic: ""
-camera_info_topic: ""
-xyzrgb_topic: ""
-sensor_link: ""
+# Example of Depth Topic Names == "sensor_name"
+sensor_name/image_topic: "color/image_color"
+sensor_name/depth_image_topic: "depth/image"
+sensor_name/camera_info_topic: "color/camera_info"
+sensor_name/xyzrgb_topic: "points/xyzrgba"
+
+sensor_name/sensor_link: "sensor_name/optical_frame"

@@ -1,7 +1,14 @@
-left_image_topic: "stereo_pair/left/image_color" 
-right_image_topic: "stereo_pair/right/image_color" 
-image_topic: ""
-depth_image_topic: ""
-camera_info_topic: ""
-xyzrgb_topic: ""
-sensor_link: ""
+# Stereo Pair topic Names == "sensor_name"
+# NOTE: all but the left and right raw images are empty as the stereo cameras are uncalibrated and can't produce the other topics
+sensor_name/left_image_topic: "left/image_color"
+sensor_name/right_image_topic: "right/image_color"
+sensor_name/left_image_rec_topic: "" 
+sensor_name/right_image_rec_topic: ""
+sensor_name/stereo_info_topic: ""
+
+sensor_name/image_topic: ""
+sensor_name/depth_image_topic: ""
+sensor_name/camera_info_topic: ""
+sensor_name/xyzrgb_topic: ""
+
+sensor_name/sensor_link: "sensor_name/left_frame"
