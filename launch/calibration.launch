@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- The input reference frames -->
+    <arg name="robot_base_frame"     default="base_link" />
+    <arg name="robot_effector_frame" default="stereo_pair_left_frame" />
+    <arg name="camera_topic"         default="stereo_pair" />
+
+    <node name="spinnaker_calibration_node" pkg="cares_hand_eye_calibration" 
+      type="calibration.py" output="screen">
+
+      <param name="robot_base_frame"     value="$(arg robot_base_frame)" />
+      <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+      <param name="camera_topic"         value="$(arg camera_topic)" />
+    </node>
+
+</launch>

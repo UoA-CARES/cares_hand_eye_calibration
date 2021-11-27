@@ -3,7 +3,7 @@
     <!-- Default blank to do live calibration -->
     <arg name="file_path" default=""/>
 
-    <arg name="sensor" default=""/>
+    <arg name="sensor" default="stereo_pair"/>
     <!-- Stereo camera topics -->
     <!-- NOTE: precalibration we only have left and right images to work with -->
     <arg name="sensor_topics" default="$(find cares_hand_eye_calibration)/config/stereo_calibration.yaml"/>

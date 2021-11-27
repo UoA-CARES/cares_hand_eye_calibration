@@ -27,13 +27,40 @@ from cares_msgs.srv import CalibrationService, ArucoDetect
 from handeye_calibrator import HandeyeCalibrator, StereoCalibrator, DepthCalibrator, CalibratorFactory
 
 import actionlib
-from platform_msgs.msg import PlatformGoalAction, PlatformGoalGoal
+from platform_msgs.msg import PlatformGoalAction
+from actionlib_msgs.msg import GoalStatus
 
 import cares_lib_ros.utils as utils
-from cares_lib_ros.path_factory import PathFactory
+from cares_lib_ros.path_factory import PathFactory, World
 
 from os.path import expanduser
 home = expanduser("~")
+
+
+
+messages = {result : key for key, result in GoalStatus.__dict__.items() 
+    if not key.startswith("_") and isinstance(result, int)}
+
+
+
+def move_path(platform_client, pathway, ee_frame):
+    for pose in pathway:
+        pose_goal = utils.create_goal_msg(pose, 0, ee_frame)
+        
+        rospy.loginfo(pose)
+        platform_client.send_goal(pose_goal)
+        platform_client.wait_for_result()
+        
+        #handle result feedback - fail, success, etc
+        result = platform_client.get_state()
+        rospy.loginfo(f"move_path: {result} {messages[result]}")
+
+        yield (pose, result)
+
+        if rospy.is_shutdown():
+            return
+                            
+
 
 def collect_data_samples(filepath, sensor_calibrator):    
     tf_buffer   = tf2_ros.Buffer()
@@ -49,31 +76,32 @@ def collect_data_samples(filepath, sensor_calibrator):
     # Creates the SimpleActionClient, passing the type of the action
     platform_server = rospy.get_param('~platform_server', 'server')
     platform_client = actionlib.SimpleActionClient(platform_server, PlatformGoalAction)
+
     
     print("Waiting for platform server - "+platform_server)
     platform_client.wait_for_server()
     print("Server Ready moving to calibration")
 
     #TODO extract this out via params
-    d_quaternion = quaternion_from_euler(0, 0, 0)
-    init_pose = utils.create_pose_msg(0, 0.75, 0.8, quaternion=d_quaternion)
-    init_goal = utils.create_goal_msg(init_pose, 0, ee_frame)
+    # d_quaternion = quaternion_from_euler(0, 0, 0)
+    # init_pose = utils.create_pose_msg(0, 0.75, 0.8, quaternion=d_quaternion)
+
+
+    init_goal = utils.create_goal_msg( PathFactory.home_pose, 0, ee_frame)
 
     print("Sending init position", init_goal)
     platform_client.send_goal(init_goal)
     platform_client.wait_for_result()
     print("Moved to initial position moving to mapping phase")
 
-    path_factory = PathFactory()
-    
-    #TODO pull this variable for path selection out...
-    pathway = path_factory.create_path(2)
+
+    pathway = PathFactory.calibration()
     total = len(pathway)
     for count, pose in enumerate(pathway):
         pose_goal = utils.create_goal_msg(pose, 0, ee_frame)
         
-        print("Moving too: "+str(count)+"/"+str(total))
-        print(pose_goal.target_pose)
+        print("Moving to: "+str(count)+"/"+str(total))
+        rospy.loginfo(pose)
         platform_client.send_goal(pose_goal)
         platform_client.wait_for_result()
         
@@ -81,9 +109,10 @@ def collect_data_samples(filepath, sensor_calibrator):
         result = platform_client.get_state()
         print("Result is ", result)
 
-        if result == 3:# SUCCEEDED
+        if result == GoalStatus.SUCCEEDED:
             time.sleep(1.0)#just to allow the shaking to stop
             file_name = filepath+str(count)
+            rospy.loginfo(f"Saving to {file_name}")
             sensor_calibrator.collect_samples(file_name, world_link, ee_frame, tf_buffer)
         else:
             print("Failed to reach pose")
@@ -109,8 +138,10 @@ def main():
     sensor = rospy.get_param('~sensor') # 'depth' 'stereo'
     sensor_calibrator = CalibratorFactory.create_calibrator(sensor)
 
-    if sensor_calibrator == None:
-        print("Undefined Sensor Type: "+str(sensor))
+    if sensor_calibrator is None:
+        rospy.logerr("unknown Sensor Type: "+str(sensor))
+        return
+
 
     filepath = ""
     filepath = rospy.get_param('~file_path', filepath)
