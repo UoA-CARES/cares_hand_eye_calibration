@@ -33,16 +33,13 @@ def main():
       for up in [World.up, World.right, -World.up]]
   pathway = concat_lists(pathway)
 
-  filename = run_scan(client, pathway, roll_tolerance=math.pi/2, ee_frame=ee_frame) 
+  # pathway = PathFactory.calibration_scan(home_position, calib_target, size=(3, 3, 1))
+
+  filename = run_scan(client, pathway, ee_frame=ee_frame) 
   calibrate(scan_file=filename)
 
   goto(home_pose)
 
-if __name__ == '__main__':
-  try:
-    main()
-  except rospy.ROSInterruptException:
-    pass
 if __name__ == '__main__':
   try:
     main()
