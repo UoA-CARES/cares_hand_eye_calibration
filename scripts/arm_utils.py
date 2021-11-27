@@ -36,23 +36,24 @@ def wait_goal(platform_client, pose_goal):
 
     return result
 
+
 def move_path(platform_client, pathway, ee_frame, roll_tolerance=0):
-    for pose in pathway:
+  for pose in pathway:
+    if roll_tolerance > 0:
+      poses = roll_variations(pose, angle_range=roll_tolerance, stops=16)
+      pose_goal = utils.create_multi_goal_msg(poses, 0, ee_frame)
 
-        if roll_tolerance > 0:
-          poses = roll_variations(pose, angle_range=roll_tolerance, stops=16)
-          pose_goal = utils.create_multi_goal_msg(poses, 0, ee_frame)
+    else:
+      pose_goal = utils.create_goal_msg(pose, 0, ee_frame)
 
-        else:
-          pose_goal = utils.create_goal_msg(pose, 0, ee_frame)
+    rospy.loginfo(pose)
+    result = wait_goal(platform_client, pose_goal)
+    yield (pose, result)
 
-        rospy.loginfo(pose)
-        result = wait_goal(platform_client, pose_goal)
-        yield (pose, result)
+    if rospy.is_shutdown():
+        return
 
-        if rospy.is_shutdown():
-            return
-        
+
 def get_client():
   # Creates the SimpleActionClient, passing the type of the action
   platform_server = rospy.get_param('~platform_server', 'server')
@@ -63,34 +64,82 @@ def get_client():
   platform_client.wait_for_server()
   return platform_client
 
+
+class CaptureClient(object):
+
+  def __init__(self):
+    self.camera_topic = rospy.get_param('~camera_topic', "stereo_pair")
+    self.capture = rospy.ServiceProxy(f'{self.camera_topic}/capture_command', Capture)
+    self.reconf = Client(f'{self.camera_topic}/capture_images', timeout=1)
+
+  def capture_status(self):
+    return rospy.wait_for_message(f"{self.camera_topic}/capture_status", CaptureStatus)
+
+
+  def scan_folder(self):
+    status = self.capture_status()
+    return f"{status.scan_folder}/{status.session}/{status.current_scan}/capture.json"
+
+
+  def single(self):
+      self.capture(source="scan", action="single")
+      rospy.wait_for_message(f"{self.camera_topic}/scan_status", ScanStatus)
+
+  
+  def enable(self, enabled=True):
+
+    if enabled:
+      self.capture(source="scan", action="start")
+    else:
+      self.capture(source="scan", action="stop")
+
+
+  def new_folder(self, scan_name=None):
+    if scan_name is not None:
+        self.reconf.update_configuration(dict(folder_prefix=scan_name))
+
+    return self.capture(source="scan", action="new")
+
+
+
 def run_scan(platform_client, pathway, scan_name=None, ee_frame="flange", roll_tolerance=0, pause_duration=0.1):
 
-  camera_topic = rospy.get_param('~camera_topic', "stereo_pair")
-
-  capture = rospy.ServiceProxy(f'{camera_topic}/capture_command', Capture)
-
-
-  if scan_name is not None:
-    reconf = Client(f'{camera_topic}/capture_images', timeout=1)
-    reconf.update_configuration(dict(folder_prefix=scan_name))
-
-
-  capture(source="scan", action="new")
-  status = rospy.wait_for_message(f"{camera_topic}/capture_status", CaptureStatus)
+  capture = CaptureClient()
+  capture.new_folder(scan_name)
 
   for _, result in move_path(platform_client, pathway, ee_frame, roll_tolerance):
     if result == GoalStatus.SUCCEEDED:
       rospy.loginfo("move succeeded, capturing frame")
-
       rospy.sleep(pause_duration)
 
-      capture(source="scan", action="single")
-      rospy.wait_for_message(f"{camera_topic}/scan_status", ScanStatus)
+      capture.single()
 
 
-  capture(source="scan", action="new")
+  filename = capture.scan_folder()
+  capture.new_folder()
 
-  filename = f"{status.scan_folder}/{status.session}/{status.current_scan}/capture.json"
   rospy.loginfo(f"captured {filename}")
+  return filename
 
-  return status
+
+
+def scan_cartesian(platform_client, pathways, scan_name=None, ee_frame="flange"):
+  def cartesian_pathway(pathway):
+      goal = utils.create_multi_goal_msg(pathway, 0, ee_frame, cartesian_path=True)
+      wait_goal(platform_client, goal)
+
+
+  capture = CaptureClient()
+  capture.new_folder(scan_name)
+  
+  filename = capture.scan_folder()
+
+
+  for pathway in pathways:
+    capture.enable(True)
+    cartesian_pathway(pathway)
+    capture.enable(False)
+
+  
+  capture.new_folder()
+  return filename
