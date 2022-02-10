@@ -3,6 +3,15 @@
     <!-- Default blank to do live calibration -->
     <arg name="file_path" default=""/>
 
+    <!-- Init pose of the arm -->
+    <arg name="init_x"  default="0.0"/>
+    <arg name="init_y"  default="0.65"/>
+    <arg name="init_z"  default="0.35"/>
+
+    <arg name="planning_link" default="base_link"/>
+
+    <arg name="platform_server" default="server"/>
+
     <arg name="sensor" default=""/>
     <!-- NOTE: as the depth camera is precalibrated we can jump straight to depth data -->
     <arg name="sensor_topics" default="$(find cares_hand_eye_calibration)/config/depth.yaml"/>
@@ -14,13 +23,26 @@
     <arg name="robot_effector_frame" default="stereo_pair/base_link" />
     <arg name="tracking_base_frame"  default="stereo_pair/left_frame" />
 
+    <!-- Which control frame will be used to move the sensor around during calibration -->
+    <arg name="robot_control_frame"  default="$(arg robot_effector_frame)" />
+
     <!-- Aruco Diamond IDs -->
-    <arg name="centre"    default="11"/>
-    <arg name="top_left"  default="6"/>
-    <arg name="top_right" default="7"/>
-    <arg name="bot_right" default="16"/>
-    <arg name="bot_left"  default="15"/>
+    <arg name="dictionary" default="3"/>
+    <arg name="centre"     default="10"/>
+    <!-- <arg name="top_left"   default="7"/>
+    <arg name="top_right"  default="8"/>
+    <arg name="bot_right"  default="14"/>
+    <arg name="bot_left"   default="13"/> -->
+
+    <arg name="is_depth_in_meters" default="true" />
 
     <include file="$(find cares_hand_eye_calibration)/launch/auto_calibration.launch" pass_all_args="true"> 
     </include> 
+
+    <include file="$(find aruco_detector)/launch/depth_detector_service.launch" pass_all_args="true">
+    </include>
+
+    <!-- Depth Diamond Detector Service -->     
+    <!-- <include file="$(find aruco_detector)/launch/depth_diamond_detector_service.launch" pass_all_args="true">
+    </include> -->
 </launch>

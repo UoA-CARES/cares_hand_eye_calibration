@@ -3,6 +3,15 @@
     <!-- Default blank to do live calibration -->
     <arg name="file_path" default=""/>
 
+    <!-- Init pose of the arm -->
+    <arg name="init_x"  default="0.0"/>
+    <arg name="init_y"  default="0.65"/>
+    <arg name="init_z"  default="0.35"/>
+
+    <arg name="planning_link" default="base_link"/>
+
+    <arg name="platform_server" default="server"/>
+
     <arg name="sensor" default=""/>
     <arg name="sensor_topics" default=""/>
 
@@ -12,33 +21,36 @@
     <arg name="robot_base_frame"     default="" />
     <arg name="robot_effector_frame" default="" />
     <arg name="tracking_base_frame"  default="" />
-        
+
+    <!-- Which control frame will be used to move the sensor around during calibration -->
+    <arg name="robot_control_frame"  default="$(arg robot_effector_frame)" />
+    
     <!-- Aruco Diamond IDs -->
-    <arg name="centre"    default="11"/>
-    <arg name="top_left"  default="6"/>
-    <arg name="top_right" default="7"/>
-    <arg name="bot_right" default="16"/>
-    <arg name="bot_left"  default="15"/>
+    <arg name="dictionary" default="3"/>
+    <arg name="centre"     default="11"/>
+    <arg name="top_left"   default="6"/>
+    <arg name="top_right"  default="7"/>
+    <arg name="bot_right"  default="16"/>
+    <arg name="bot_left"   default="15"/>
 
     <node name="handeye_calibration_node" pkg="cares_hand_eye_calibration" type="handeye_calibration_node.py" output="screen">
-        <param name="file_path"               value="$(arg file_path)" />
-        <param name="sensor"                  value="$(arg sensor)" />
-        <param name="robot_base_frame"        value="$(arg robot_base_frame)" />
-        <param name="robot_effector_frame"    value="$(arg robot_effector_frame)" />
-        <param name="tracking_base_frame"     value="$(arg tracking_base_frame)" />
+        <param name="file_path"            value="$(arg file_path)" />
+        <param name="init_x"               value="$(arg init_x)" />
+        <param name="init_y"               value="$(arg init_y)" />
+        <param name="init_z"               value="$(arg init_z)" />
+        <param name="planning_link"        value="$(arg planning_link)"/>
+        <param name="platform_server"      value="$(arg platform_server)"/>
+        <param name="sensor"               value="$(arg sensor)" />
+        <param name="robot_base_frame"     value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+        <param name="tracking_base_frame"  value="$(arg tracking_base_frame)" />
+        <param name="robot_control_frame"  value="$(arg robot_control_frame)" />
+        
+        <param name="target_marker_id"  value="$(arg centre)" />
 
         <!-- Sensor Topics -->
         <rosparam file="$(arg sensor_topics)" command="load"/>
     </node>
-        
-    <include file="$(find aruco_detector)/launch/stereo_diamond_detector_service.launch" > 
-        <arg name="display"   value="$(arg display)"/> 
-        <arg name="centre"    value="$(arg centre)"/>
-        <arg name="top_left"  value="$(arg top_left)"/>
-        <arg name="top_right" value="$(arg top_right)"/>
-        <arg name="bot_right" value="$(arg bot_right)"/>
-        <arg name="bot_left"  value="$(arg bot_left)"/>
-    </include>
     
     <node name="hand_eye_solver" pkg="visp_hand2eye_calibration" type="visp_hand2eye_calibration_calibrator">
         <remap from="/compute_effector_camera_quick" to="compute_effector_camera_quick"/>

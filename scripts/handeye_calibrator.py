@@ -15,9 +15,12 @@ import cares_lib_ros.utils as utils
 from cares_lib_ros.data_sampler import DataSamplerFactory, DepthDataSampler, StereoDataSampler
 
 class Calibrator(object):
-    def __init__(self, image_sampler):
+    def __init__(self, image_sampler, target_marker_id):
         self.image_sampler = image_sampler
         self.image_list = []
+
+        # Marker we are tracking to calibrate on
+        self.target_marker_id = target_marker_id
 
         # Setup Charuco detection service
         self.aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)
@@ -34,9 +37,9 @@ class Calibrator(object):
         for i in range(len(self.image_list)):
             # Get transform from charuco detection service
             aruco_transforms = self.detect_aruco(self.image_list[i])
-            marker_id = 11
-            if marker_id in aruco_transforms.ids:
-                index = aruco_transforms.ids.index(marker_id)
+
+            if self.target_marker_id in aruco_transforms.ids:
+                index = aruco_transforms.ids.index(self.target_marker_id)
                 transform = aruco_transforms.transforms[index]
                 sample = {'robot':self.image_list[i][3],'optical':transform}
                 print(sample)
@@ -94,9 +97,10 @@ class Calibrator(object):
         pass
 
 class StereoCalibrator(Calibrator):
-    def __init__(self, image_sampler):
+    def __init__(self, image_sampler, target_marker_id):
         super(StereoCalibrator, self).__init__(
-            image_sampler=image_sampler
+            image_sampler=image_sampler,
+            target_marker_id=target_marker_id
             )
 
     def calibrate(self, filepath):
@@ -142,13 +146,24 @@ class StereoCalibrator(Calibrator):
         return [self.image_sampler.left_image, self.image_sampler.right_image, None]
 
 class DepthCalibrator(Calibrator):
-    def __init__(self, image_sampler):
+    def __init__(self, image_sampler, target_marker_id):
         super(DepthCalibrator, self).__init__(
-            image_sampler=image_sampler
+            image_sampler=image_sampler,
+            target_marker_id=target_marker_id
             )
 
     def load_data(self, filepath):
-        pass
+        # Fill in the file loading method to test with file loading on depth data
+        self.image_list = []
+        images, _       = utils.loadImages(filepath+"*image_color.png")
+        depth_images, _ = utils.loadImages(filepath+"*depth.tif")
+        transforms, _   = utils.load_transforms(filepath+"*transforms.yaml")
+        camera_info     = utils.load_camerainfo(filepath+"0_camera_info.yaml")
+
+        assert len(images) == len(depth_images) == len(transforms)
+        for i in range(len(images)):
+            file_name = filepath+str(i)+"_"
+            self.image_list.append([images[i], depth_images[i], camera_info, transforms[i], file_name])
 
     def detect_aruco(self, image_data):
         msg_image       = self.bridge.cv2_to_imgmsg(image_data[0], encoding="passthrough")
@@ -159,18 +174,17 @@ class DepthCalibrator(Calibrator):
     def sample_data(self):
         return [self.image_sampler.image, self.image_sampler.depth_image, self.image_sampler.camera_info]
 
-
 class CalibratorFactory(object):
     def __init__(self):
         pass
 
     @staticmethod
-    def create_calibrator(sensor):
+    def create_calibrator(sensor, target_marker_id):
         sensor_sampler = DataSamplerFactory.create_datasampler(sensor)
         if isinstance(sensor_sampler, DepthDataSampler):
-            return DepthCalibrator(sensor_sampler)
+            return DepthCalibrator(sensor_sampler, target_marker_id)
         elif isinstance(sensor_sampler, StereoDataSampler):
-            return StereoCalibrator(sensor_sampler)
+            return StereoCalibrator(sensor_sampler, target_marker_id)
         return None
 
 class HandeyeCalibrator(object):
