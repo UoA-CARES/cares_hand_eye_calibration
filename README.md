@@ -24,9 +24,7 @@ Base package dependencies
 	b) git clone https://github.com/UoA-CARES/cares_lib_ros.git
 
 4) Install VISP library (future will remove this dependancy to utilise opencv hand-eye calibration library)
-	a) https://visp-doc.inria.fr/doxygen/visp-daily/tutorial-install-ubuntu.html
-	b) cd ~/catkin_ws/src
-	c) git clone https://github.com/lagadic/vision_visp.git
+	a) sudo apt-get install ros-noetic-vision-visp
 ```
 
 ### Calabration and Marker Services
