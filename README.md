@@ -1,5 +1,6 @@
 # CARES_hand_eye_calibration
 Hand Eye Calibration for Robot arms and RGB/RGBD cameras. 
+This package will enable you to calibrate either hand-to-eye (camera watching the arm) or eye-on-hand (camera on the arm).
 
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -84,6 +85,7 @@ This launch file can be included for calibrating a pair of stereo cameras and th
     <arg name="display" default="true"/>
 
     <!-- The input reference frames -->
+    <arg name="eye_on_hand"          default="true" />
     <arg name="robot_base_frame"     default="base_link" />
     <arg name="robot_effector_frame" default="stereo_pair/base_link" />
     <arg name="tracking_base_frame"  default="stereo_pair/left_frame" />
@@ -151,6 +153,7 @@ This launch file can be included for hand-eye calibration of a depth sensor.
     <arg name="display" default="true"/>
 
     <!-- The input reference frames -->
+    <arg name="eye_on_hand"          default="true" />
     <arg name="robot_base_frame"     default="base_link" />
     <arg name="robot_effector_frame" default="stereo_pair/base_link" />
     <arg name="tracking_base_frame"  default="stereo_pair/left_frame" />
@@ -187,6 +190,7 @@ An example of this with the "your_robot" platform using a stereo pair is shown b
 ```xml
 <?xml version="1.0" ?>
 <launch>
+    <arg name="eye_on_hand"           default="true" />
 	<arg name="robot_base_frame"      default="base_link" />
 	<arg name="robot_effector_frame"  default="your_robot/base_link" />
 	<arg name="tracking_base_frame"   default="your_robot_sensor/your_robot_sensor_frame"/>

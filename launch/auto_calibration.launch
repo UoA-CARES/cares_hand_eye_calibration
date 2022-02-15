@@ -18,6 +18,7 @@
     <arg name="display" default="true"/>
 
     <!-- The input reference frames -->
+    <arg name="eye_on_hand"          default="true" />
     <arg name="robot_base_frame"     default="" />
     <arg name="robot_effector_frame" default="" />
     <arg name="tracking_base_frame"  default="" />
@@ -41,12 +42,13 @@
         <param name="planning_link"        value="$(arg planning_link)"/>
         <param name="platform_server"      value="$(arg platform_server)"/>
         <param name="sensor"               value="$(arg sensor)" />
+        <param name="eye_on_hand"          value="$(arg eye_on_hand)" />
         <param name="robot_base_frame"     value="$(arg robot_base_frame)" />
         <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
         <param name="tracking_base_frame"  value="$(arg tracking_base_frame)" />
         <param name="robot_control_frame"  value="$(arg robot_control_frame)" />
         
-        <param name="target_marker_id"  value="$(arg centre)" />
+        <param name="target_marker_id"     value="$(arg centre)" />
 
         <!-- Sensor Topics -->
         <rosparam file="$(arg sensor_topics)" command="load"/>
