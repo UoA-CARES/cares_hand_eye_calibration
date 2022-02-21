@@ -25,6 +25,10 @@ class Calibrator(object):
         # Setup Charuco detection service
         self.aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)
 
+        self.eye_on_hand = rospy.get_param('~eye_on_hand', True)
+        self.robot_effector_frame = rospy.get_param('~robot_effector_frame')
+        self.robot_base_frame     = rospy.get_param('~robot_base_frame')
+
         self.bridge = CvBridge()
 
     def calibrate(self, filepath):
@@ -41,7 +45,8 @@ class Calibrator(object):
             if self.target_marker_id in aruco_transforms.ids:
                 index = aruco_transforms.ids.index(self.target_marker_id)
                 transform = aruco_transforms.transforms[index]
-                sample = {'robot':self.image_list[i][3],'optical':transform}
+                sample = {'robot':self.image_list[i][3], 'optical':transform}
+
                 print(sample)
                 hand_eye_calibrator.collect_samples(sample)
             else:
@@ -59,11 +64,15 @@ class Calibrator(object):
         if calibration is not None:
             calibration.to_file(filepath[:-1], self.image_sampler.sensor_name+"_handeye_calibration")
 
-    def collect_samples(self, file_name, world_link, ee_frame, tf_buffer):
+    def collect_samples(self, file_name, tf_buffer):
         self.image_sampler.sample_multiple_streams()
 
         sensor_timestamp = self.image_sampler.time_stamp
-        transform = tf_buffer.lookup_transform(world_link, ee_frame, sensor_timestamp, rospy.Duration(1.0))
+
+        if self.eye_on_hand:
+            transform = self.tfBuffer.lookup_transform(self.robot_base_frame, self.robot_effector_frame, sensor_timestamp, rospy.Duration(1.0))
+        else:
+            transform = self.tfBuffer.lookup_transform(self.robot_effector_frame, self.robot_base_frame, sensor_timestamp, rospy.Duration(1.0))
 
         self.image_sampler.save(file_name)
         utils.save_transform(file_name+"_transforms.yaml", transform)

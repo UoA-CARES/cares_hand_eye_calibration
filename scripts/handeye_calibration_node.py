@@ -68,16 +68,6 @@ def collect_data_samples(filepath, sensor_calibrator):
     tf_buffer   = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
-    #As we are moving the arm around without a calibrated sensor we use the ee_link to move the arm
-    control_frame = rospy.get_param('~robot_control_frame')
-    
-    ee_frame = rospy.get_param('~robot_effector_frame')
-
-
-    #Global link to align data too
-    #TODO extract this out via params
-    world_link = "world"
-
     pub_markers =  rospy.Publisher("path_marker", Marker, queue_size = 100)
 
     # Creates the SimpleActionClient, passing the type of the action
@@ -88,7 +78,9 @@ def collect_data_samples(filepath, sensor_calibrator):
     platform_client.wait_for_server()
     print("Server Ready moving to calibration")
 
-    #TODO extract this out via params
+    #As we are moving the arm around without a calibrated sensor we use another refernece frame for controlling movement
+    control_frame = rospy.get_param('~robot_control_frame')
+
     x = rospy.get_param('~init_x')
     y = rospy.get_param('~init_y')
     z = rospy.get_param('~init_z')
@@ -134,7 +126,7 @@ def collect_data_samples(filepath, sensor_calibrator):
 
             time.sleep(1.0)#just to allow the shaking to stop
             file_name = filepath+str(count)
-            sensor_calibrator.collect_samples(file_name, world_link, ee_frame, tf_buffer)
+            sensor_calibrator.collect_samples(file_name, tf_buffer)
         else:
             print("Failed to reach pose")
             mark_on_rviz(pub_markers, pose, planning_link, count, success=False)
