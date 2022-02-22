@@ -57,8 +57,6 @@ class HandeyeCalibration(object):
             self.transformation.header.frame_id = robot_base_frame
         self.transformation.child_frame_id = tracking_base_frame
 
-        
-
     def to_dict(self):
         """
         Returns a dictionary representing this calibration.

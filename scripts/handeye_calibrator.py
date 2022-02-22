@@ -28,6 +28,7 @@ class Calibrator(object):
         self.eye_on_hand = rospy.get_param('~eye_on_hand', True)
         self.robot_effector_frame = rospy.get_param('~robot_effector_frame')
         self.robot_base_frame     = rospy.get_param('~robot_base_frame')
+        self.tracking_marker_frame = rospy.get_param('~tracking_marker_frame')
 
         self.bridge = CvBridge()
 
@@ -41,10 +42,16 @@ class Calibrator(object):
         for i in range(len(self.image_list)):
             # Get transform from charuco detection service
             aruco_transforms = self.detect_aruco(self.image_list[i])
-
+            sensor_transform = self.image_list[i][4]
+            
             if self.target_marker_id in aruco_transforms.ids:
                 index = aruco_transforms.ids.index(self.target_marker_id)
-                transform = aruco_transforms.transforms[index]
+                
+                # NOTE: The marker poses return in the optical frame reference for the given sensors
+                # Transforms relative to the require link    
+                marker_transform = aruco_transforms.transforms[index]
+                transform = marker_transform + sensor_transform
+
                 sample = {'robot':self.image_list[i][3], 'optical':transform}
 
                 print(sample)
@@ -54,9 +61,9 @@ class Calibrator(object):
 
         # Compute the calibration
         calibration = hand_eye_calibrator.compute_calibration()
-        hand_to_optical_transform  = calibration.transformation
-        hand_to_body_transform  = self.rotate_to_body_frame(hand_to_optical_transform)
-        calibration.transformation = hand_to_body_transform
+        # hand_to_optical_transform  = calibration.transformation
+        # hand_to_body_transform  = self.rotate_to_body_frame(hand_to_optical_transform)
+        # calibration.transformation = hand_to_body_transform
 
         print("Hand-eye calibration:")
         print(calibration.to_dict())
@@ -68,16 +75,20 @@ class Calibrator(object):
         self.image_sampler.sample_multiple_streams()
 
         sensor_timestamp = self.image_sampler.time_stamp
+        sensor_frame_id  = self.image_sampler.frame_id
 
         if self.eye_on_hand:
-            transform = self.tfBuffer.lookup_transform(self.robot_base_frame, self.robot_effector_frame, sensor_timestamp, rospy.Duration(1.0))
+            transform = tf_buffer.lookup_transform(self.robot_base_frame, self.robot_effector_frame, sensor_timestamp, rospy.Duration(1.0))
         else:
-            transform = self.tfBuffer.lookup_transform(self.robot_effector_frame, self.robot_base_frame, sensor_timestamp, rospy.Duration(1.0))
+            transform = tf_buffer.lookup_transform(self.robot_effector_frame, self.robot_base_frame, sensor_timestamp, rospy.Duration(1.0))
 
         self.image_sampler.save(file_name)
         utils.save_transform(file_name+"_transforms.yaml", transform)
 
-        self.image_list.append(self.sample_data() + [transform, file_name])
+        sensor_transform = tf_buffer.lookup_transform(self.tracking_marker_frame, sensor_frame_id, time, rospy.Duration(4))
+        utils.save_transform(file_name+"_sensor_transforms.yaml", sensor_transform)
+
+        self.image_list.append(self.sample_data() + [transform, sensor_transform, file_name])
 
     # The stereo calibration produces a calibration to the optical frame, we need to the body frame
     # This is just a rigid rotation around the optical frame
@@ -137,13 +148,14 @@ class StereoCalibrator(Calibrator):
 
     def load_data(self, filepath):
         self.image_list = []
-        left_image, files  = utils.loadImages(filepath+"*left_image_color.png")
-        right_image, files = utils.loadImages(filepath+"*right_image_color.png")
-        transforms, files  = utils.load_transforms(filepath+"*transforms.yaml")
+        left_image, _  = utils.loadImages(filepath+"*left_image_color.png")
+        right_image, _ = utils.loadImages(filepath+"*right_image_color.png")
+        transforms, _  = utils.load_transforms(filepath+"*transforms.yaml")
+        sensor_transforms, _  = utils.load_transforms(filepath+"*sensor_transforms.yaml")
         assert len(left_image) == len(right_image) == len(transforms)
         for i in range(len(left_image)):
             file_name = filepath+str(i)+"_"
-            self.image_list.append([left_image[i], right_image[i], None, transforms[i], file_name])
+            self.image_list.append([left_image[i], right_image[i], None, transforms[i], sensor_transforms[i] file_name])
 
     def detect_aruco(self, image_data):
         msg_left_rectified  = self.bridge.cv2_to_imgmsg(image_data[0], encoding="passthrough")
@@ -167,12 +179,13 @@ class DepthCalibrator(Calibrator):
         images, _       = utils.loadImages(filepath+"*image_color.png")
         depth_images, _ = utils.loadImages(filepath+"*depth.tif")
         transforms, _   = utils.load_transforms(filepath+"*transforms.yaml")
+        sensor_transforms, _ = utils.load_transforms(filepath+"*sensor_transforms.yaml")
         camera_info     = utils.load_camerainfo(filepath+"0_camera_info.yaml")
 
         assert len(images) == len(depth_images) == len(transforms)
         for i in range(len(images)):
             file_name = filepath+str(i)+"_"
-            self.image_list.append([images[i], depth_images[i], camera_info, transforms[i], file_name])
+            self.image_list.append([images[i], depth_images[i], camera_info, transforms[i], sensor_transforms[i], file_name])
 
     def detect_aruco(self, image_data):
         msg_image       = self.bridge.cv2_to_imgmsg(image_data[0], encoding="passthrough")
@@ -277,53 +290,6 @@ class HandeyeCalibrator(object):
         :type: rospy.ServiceProxy
         """
 
-    def _wait_for_tf_init(self):
-        """
-        Waits until all needed frames are present in tf.
-
-        :rtype: None
-        """
-        self.tfBuffer.lookup_transform(self.robot_base_frame, self.robot_effector_frame, rospy.Time(0), rospy.Duration(10))
-        self.tfBuffer.lookup_transform(self.tracking_base_frame, self.tracking_marker_frame, rospy.Time(0), rospy.Duration(10))
-
-    def _get_transforms(self, time=None):
-        """
-        Samples the transforms at the given time.
-
-        :param time: sampling time (now if None)
-        :type time: None|rospy.Time
-        :rtype: dict[str, ((float, float, float), (float, float, float, float))]
-        """
-        if time is None:
-            #time = rospy.Time.now()
-            time = rospy.Time(0)
-
-        try:
-            # here we trick the library (it is actually made for eye_on_hand only). Trust me, I'm an engineer
-            if self.eye_on_hand:
-                rob = self.tfBuffer.lookup_transform(self.robot_base_frame, self.robot_effector_frame, time, rospy.Duration(4))
-            else:
-                rob = self.tfBuffer.lookup_transform(self.robot_effector_frame, self.robot_base_frame, time, rospy.Duration(4))
-            opt = self.tfBuffer.lookup_transform(self.tracking_base_frame, self.tracking_marker_frame, time, rospy.Duration(4))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            print("Required transforms not found")
-            return None
-        return {'robot': rob, 'optical': opt}
-
-    def take_sample(self):
-        """
-        Samples the transformations and appends the sample to the list.
-
-        :rtype: None
-        """
-        rospy.loginfo("Taking a sample...")
-        transforms = self._get_transforms()
-        if transforms is not None:
-            rospy.loginfo("Got a sample")
-            self.samples.append(transforms)
-            return transforms
-        return None
-
     def collect_samples(self, transforms):
         """
         Samples the transformations and appends the sample to the list.
@@ -362,8 +328,8 @@ class HandeyeCalibrator(object):
         camera_marker_samples.header.frame_id = self.tracking_base_frame
 
         for s in self.samples:
-            camera_marker_samples.transforms.append(s['optical'].transform)
-            hand_world_samples.transforms.append(s['robot'].transform)
+          camera_marker_samples.transforms.append(s['optical'].transform)
+          hand_world_samples.transforms.append(s['robot'].transform)
 
         return hand_world_samples, camera_marker_samples
 
