@@ -28,7 +28,7 @@ class Calibrator(object):
         self.eye_on_hand = rospy.get_param('~eye_on_hand', True)
         self.robot_effector_frame = rospy.get_param('~robot_effector_frame')
         self.robot_base_frame     = rospy.get_param('~robot_base_frame')
-        self.tracking_marker_frame = rospy.get_param('~tracking_marker_frame')
+        self.tracking_base_frame = rospy.get_param('~tracking_base_frame')
 
         self.bridge = CvBridge()
 
@@ -85,7 +85,7 @@ class Calibrator(object):
         self.image_sampler.save(file_name)
         utils.save_transform(file_name+"_transforms.yaml", transform)
 
-        sensor_transform = tf_buffer.lookup_transform(self.tracking_marker_frame, sensor_frame_id, time, rospy.Duration(4))
+        sensor_transform = tf_buffer.lookup_transform(self.tracking_base_frame, sensor_frame_id, time, rospy.Duration(4))
         utils.save_transform(file_name+"_sensor_transforms.yaml", sensor_transform)
 
         self.image_list.append(self.sample_data() + [transform, sensor_transform, file_name])
