@@ -81,11 +81,16 @@ def collect_data_samples(filepath, sensor_calibrator):
     #As we are moving the arm around without a calibrated sensor we use another refernece frame for controlling movement
     control_frame = rospy.get_param('~robot_control_frame')
 
-    x = rospy.get_param('~init_x')
-    y = rospy.get_param('~init_y')
-    z = rospy.get_param('~init_z')
+    init_x = rospy.get_param('~init_x')
+    init_y = rospy.get_param('~init_y')
+    init_z = rospy.get_param('~init_z')
+    init_roll  = rospy.get_param('~init_roll', 0)
+    init_pitch = rospy.get_param('~init_pitch', 0)
+    init_yaw   = rospy.get_param('~init_yaw', 90)
+
     planning_link = rospy.get_param('~planning_link')
-    init_pose = utils.create_pose_stamped_msg(x, y, z, planning_link, rpy_deg=[0,0,0])
+
+    init_pose = utils.create_pose_stamped_msg(init_x, init_y, init_z, planning_link, rpy_deg=[init_roll,init_pitch,init_yaw])
 
     ns = rospy.get_namespace().strip("/")
     init_goal = utils.create_goal_msg(init_pose, 0, control_frame)
@@ -96,7 +101,7 @@ def collect_data_samples(filepath, sensor_calibrator):
     result = platform_client.get_state()
     if result != 3:
         print("failed to home")
-        return False
+        # return False
 
     print("Moved to initial position moving to data gathering phase")
 
@@ -113,7 +118,7 @@ def collect_data_samples(filepath, sensor_calibrator):
         pose_goal = utils.create_goal_msg(pose, 0, control_frame)
         
         print("Moving too: "+str(count)+"/"+str(total))
-        print(pose_goal.target_pose)
+        # print(pose_goal.target_pose)
         platform_client.send_goal(pose_goal)
         platform_client.wait_for_result()
         

@@ -27,12 +27,14 @@
     <arg name="robot_control_frame"  default="$(arg robot_effector_frame)" />
     
     <!-- Aruco Diamond IDs -->
-    <arg name="dictionary" default="3"/>
-    <arg name="centre"     default="11"/>
+    <arg name="dictionary"       default="3"/>
+    <arg name="target_marker_id" default="0"/>
+
+    <!-- <arg name="centre"     default="11"/>
     <arg name="top_left"   default="6"/>
     <arg name="top_right"  default="7"/>
     <arg name="bot_right"  default="16"/>
-    <arg name="bot_left"   default="15"/>
+    <arg name="bot_left"   default="15"/> -->
 
     <node name="handeye_calibration_node" pkg="cares_hand_eye_calibration" type="handeye_calibration_node.py" output="screen">
         <param name="file_path"            value="$(arg file_path)" />
@@ -48,7 +50,7 @@
         <param name="tracking_base_frame"  value="$(arg tracking_base_frame)" />
         <param name="robot_control_frame"  value="$(arg robot_control_frame)" />
         
-        <param name="target_marker_id"     value="$(arg centre)" />
+        <param name="target_marker_id"     value="$(arg target_marker_id)" />
 
         <!-- Sensor Topics -->
         <rosparam file="$(arg sensor_topics)" command="load"/>

@@ -43,17 +43,24 @@
     <arg name="method"     default="1"/>
 
     <!-- Aruco Diamond IDs -->
-    <arg name="centre"    default="11"/>
-    <arg name="top_left"  default="6"/>
-    <arg name="top_right" default="7"/>
-    <arg name="bot_right" default="16"/>
-    <arg name="bot_left"  default="15"/>
+    <arg name="centre"    default="83"/>
+    <arg name="top_left"  default="74"/>
+    <arg name="top_right" default="75"/>
+    <arg name="bot_right" default="91"/>
+    <arg name="bot_left"  default="90"/>
+    <arg name="target_marker_id" default="$(arg centre)"/>
 
     <include file="$(find cares_hand_eye_calibration)/launch/auto_calibration.launch" pass_all_args="true"> 
     </include>
     
+    <!-- Mono Charuco Detector Service -->
+    <!-- <include file="$(find aruco_detector)/launch/mono_charuco_detector.launch" pass_all_args="true">
+        <arg name="service" default="True"/>
+    </include> -->
+
     <!-- Stereo Diamond Detector Service -->     
-    <include file="$(find aruco_detector)/launch/stereo_diamond_detector_service.launch" pass_all_args="true">
+    <include file="$(find aruco_detector)/launch/stereo_diamond_detector.launch" pass_all_args="true">
+        <arg name="service" default="True"/>
     </include>
 
     <!-- Stereo Calibration Service -->

@@ -29,7 +29,7 @@
 
     <!-- Aruco Diamond IDs -->
     <arg name="dictionary" default="3"/>
-    <arg name="centre"     default="10"/>
+    <arg name="target_marker_id" default="0"/>
     <!-- <arg name="top_left"   default="7"/>
     <arg name="top_right"  default="8"/>
     <arg name="bot_right"  default="14"/>
@@ -40,7 +40,8 @@
     <include file="$(find cares_hand_eye_calibration)/launch/auto_calibration.launch" pass_all_args="true"> 
     </include> 
 
-    <include file="$(find aruco_detector)/launch/depth_detector_service.launch" pass_all_args="true">
+    <include file="$(find aruco_detector)/launch/depth_aruco_detector.launch" pass_all_args="true">
+        <arg name="service" default="True"/>
     </include>
 
     <!-- Depth Diamond Detector Service -->     
