@@ -48,20 +48,26 @@
     <arg name="top_right" default="75"/>
     <arg name="bot_right" default="91"/>
     <arg name="bot_left"  default="90"/>
-    <arg name="target_marker_id" default="$(arg centre)"/>
+    <arg name="target_marker_id" default="0"/>
+
+    <arg name="marker_type" default="diamond"/>
 
     <include file="$(find cares_hand_eye_calibration)/launch/auto_calibration.launch" pass_all_args="true"> 
     </include>
     
     <!-- Mono Charuco Detector Service -->
-    <!-- <include file="$(find aruco_detector)/launch/mono_charuco_detector.launch" pass_all_args="true">
-        <arg name="service" default="True"/>
-    </include> -->
+    <group if="$(eval marker_type == 'charuco')">
+        <include file="$(find aruco_detector)/launch/mono_charuco_detector.launch" pass_all_args="true">
+            <arg name="service" default="True"/>
+        </include>
+    </group>
 
     <!-- Stereo Diamond Detector Service -->     
-    <include file="$(find aruco_detector)/launch/stereo_diamond_detector.launch" pass_all_args="true">
-        <arg name="service" default="True"/>
-    </include>
+    <group if="$(eval marker_type == 'diamond')">
+        <include file="$(find aruco_detector)/launch/stereo_diamond_detector.launch" pass_all_args="true">
+            <arg name="service" default="True"/>
+        </include>
+    </group>
 
     <!-- Stereo Calibration Service -->
     <include file="$(find stereo_calibration)/launch/service_stereo_calibration.launch" pass_all_args="true">

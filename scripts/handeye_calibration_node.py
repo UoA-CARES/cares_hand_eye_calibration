@@ -129,7 +129,7 @@ def collect_data_samples(filepath, sensor_calibrator):
         if result == 3:# SUCCEEDED
             mark_on_rviz(pub_markers, pose, planning_link, count, success=True)
 
-            time.sleep(1.0)#just to allow the shaking to stop
+            rospy.sleep(2.0)#just to allow the shaking to stop
             file_name = filepath+str(count)
             sensor_calibrator.collect_samples(file_name, tf_buffer)
         else:
