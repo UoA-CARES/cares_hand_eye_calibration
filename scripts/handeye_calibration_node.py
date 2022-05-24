@@ -27,7 +27,7 @@ from cares_msgs.srv import CalibrationService, ArucoDetect
 from handeye_calibrator import HandeyeCalibrator, StereoCalibrator, DepthCalibrator, CalibratorFactory
 
 import actionlib
-from platform_msgs.msg import PlatformGoalAction, PlatformGoalGoal
+from cares_msgs.msg import PlatformGoalAction, PlatformGoalGoal
 
 import cares_lib_ros.utils as utils
 from cares_lib_ros.path_factory import PathFactory
@@ -93,7 +93,7 @@ def collect_data_samples(filepath, sensor_calibrator):
     init_pose = utils.create_pose_stamped_msg(init_x, init_y, init_z, planning_link, rpy_deg=[init_roll,init_pitch,init_yaw])
 
     ns = rospy.get_namespace().strip("/")
-    init_goal = utils.create_goal_msg(init_pose, 0, control_frame)
+    init_goal = utils.create_goal_msg(init_pose, PlatformGoalGoal.MOVE, control_frame)
 
     print("Sending init position", init_goal)
     platform_client.send_goal(init_goal)
@@ -115,7 +115,7 @@ def collect_data_samples(filepath, sensor_calibrator):
     mark_on_rviz(pub_markers, target_pose, planning_link, -1, success=True)
 
     for count, pose in enumerate(pathway['pathway']):
-        pose_goal = utils.create_goal_msg(pose, 0, control_frame)
+        pose_goal = utils.create_goal_msg(pose, PlatformGoalGoal.MOVE, control_frame)
         
         print("Moving too: "+str(count)+"/"+str(total))
         # print(pose_goal.target_pose)

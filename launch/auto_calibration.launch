@@ -7,6 +7,10 @@
     <arg name="init_x"  default="0.0"/>
     <arg name="init_y"  default="0.65"/>
     <arg name="init_z"  default="0.35"/>
+    <!-- Degrees -->
+    <arg name="init_roll"  value="180.0"/>
+    <arg name="init_pitch" value="0.0"/>
+    <arg name="init_yaw"   value="90.0"/>
 
     <arg name="planning_link" default="base_link"/>
 
@@ -41,6 +45,9 @@
         <param name="init_x"               value="$(arg init_x)" />
         <param name="init_y"               value="$(arg init_y)" />
         <param name="init_z"               value="$(arg init_z)" />
+        <param name="init_roll"            value="$(arg init_roll)" />
+        <param name="init_pitch"           value="$(arg init_pitch)" />
+        <param name="init_yaw"             value="$(arg init_yaw)" />
         <param name="planning_link"        value="$(arg planning_link)"/>
         <param name="platform_server"      value="$(arg platform_server)"/>
         <param name="sensor"               value="$(arg sensor)" />

@@ -7,6 +7,10 @@
     <arg name="init_x"  default="0.0"/>
     <arg name="init_y"  default="0.65"/>
     <arg name="init_z"  default="0.35"/>
+    <!-- Degrees -->
+    <arg name="init_roll"  value="180.0"/>
+    <arg name="init_pitch" value="0.0"/>
+    <arg name="init_yaw"   value="90.0"/>
 
     <arg name="planning_link" default="base_link"/>
 
