@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import roslib
-import math 
+import math
 import time
 from datetime import datetime
 
@@ -56,7 +56,7 @@ def mark_on_rviz(pub, points, world_link, count, success = True):
         box_marker.color.r = 0.0
         box_marker.color.g = 1.0
         box_marker.color.b = 0.0
-        
+
     else:
         box_marker.color.r = 1.0
         box_marker.color.g = 0.0
@@ -64,7 +64,7 @@ def mark_on_rviz(pub, points, world_link, count, success = True):
     box_marker.color.a = 1.0
     pub.publish(box_marker)
 
-def collect_data_samples(filepath, sensor_calibrator):    
+def collect_data_samples(filepath, sensor_calibrator):
     tf_buffer   = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
@@ -73,7 +73,7 @@ def collect_data_samples(filepath, sensor_calibrator):
     # Creates the SimpleActionClient, passing the type of the action
     platform_server = rospy.get_param('~platform_server')
     platform_client = actionlib.SimpleActionClient(platform_server, PlatformGoalAction)
-    
+
     print("Waiting for platform server - "+platform_server)
     platform_client.wait_for_server()
     print("Server Ready moving to calibration")
@@ -106,7 +106,7 @@ def collect_data_samples(filepath, sensor_calibrator):
     print("Moved to initial position moving to data gathering phase")
 
     path_factory = PathFactory()
-    
+
     #TODO pull this variable for path selection out...
     pathway = path_factory.create_path(2, planning_link)
     total = len(pathway['pathway'])
@@ -116,12 +116,11 @@ def collect_data_samples(filepath, sensor_calibrator):
 
     for count, pose in enumerate(pathway['pathway']):
         pose_goal = utils.create_goal_msg(pose, PlatformGoalGoal.MOVE, control_frame)
-        
         print("Moving too: "+str(count)+"/"+str(total))
         # print(pose_goal.target_pose)
         platform_client.send_goal(pose_goal)
         platform_client.wait_for_result()
-        
+
         #handle result feedback - fail, success, etc
         result = platform_client.get_state()
         print("Result is ", result)
@@ -138,7 +137,7 @@ def collect_data_samples(filepath, sensor_calibrator):
 
         if rospy.is_shutdown():
             return False
-                            
+
     print("Moving back to home position")
     platform_client.send_goal(init_goal)
     return True
@@ -176,7 +175,7 @@ def main():
     print("Saving data too: "+filepath)
 
     sensor_calibrator.calibrate(filepath)
-    
+
     print("Done calibration")
 
 if __name__ == '__main__':
