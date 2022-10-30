@@ -23,7 +23,7 @@ class Calibrator(object):
         self.target_marker_id = target_marker_id
 
         # Setup Charuco detection service
-        self.aruco_detect = rospy.ServiceProxy('aruco_detector', ArucoDetect)
+        self.aruco_detect = rospy.ServiceProxy(f"{image_sampler.sensor_name}/aruco_detector", ArucoDetect)
 
         self.eye_on_hand = rospy.get_param('~eye_on_hand', True)
         self.robot_effector_frame = rospy.get_param('~robot_effector_frame')
