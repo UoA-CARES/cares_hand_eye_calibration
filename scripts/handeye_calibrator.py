@@ -3,9 +3,10 @@ import tf2_ros
 from visp_hand2eye_calibration.msg import TransformArray
 from visp_hand2eye_calibration.srv import compute_effector_camera_quick
 from tf.transformations import quaternion_from_euler, euler_from_quaternion, quaternion_multiply
+import transforms3d as tfs
 
 from handeye_calibration import HandeyeCalibration
-from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
+from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped, Pose
 
 import cv2
 from cv_bridge import CvBridge
@@ -13,6 +14,11 @@ from cv_bridge import CvBridge
 from cares_msgs.srv import CalibrationService, ArucoDetect
 import cares_lib_ros.utils as utils
 from cares_lib_ros.data_sampler import DataSamplerFactory, DepthDataSampler, StereoDataSampler
+
+import numpy as np
+import math
+import tf
+import yaml
 
 class Calibrator(object):
     def __init__(self, image_sampler, target_marker_id):
@@ -49,20 +55,28 @@ class Calibrator(object):
 
                 # print(sample)
                 hand_eye_calibrator.collect_samples(sample)
+
             else:
                 print("Marker not detected")
 
+
         # Compute the calibration
-        calibration = hand_eye_calibrator.compute_calibration()
-        hand_to_optical_transform  = calibration.transformation
-        hand_to_body_transform  = self.rotate_to_body_frame(hand_to_optical_transform)
-        calibration.transformation = hand_to_body_transform
+        calibrations, best_calib = hand_eye_calibrator.compute_calibration(filepath)
+        for calibration_method, calibration in calibrations.items():
+            hand_to_optical_transform  = calibration.transformation
+            hand_to_body_transform  = self.rotate_to_body_frame(hand_to_optical_transform)
+            calibration.transformation = hand_to_body_transform
 
-        print("Hand-eye calibration:")
-        print(calibration.to_dict())
+            print("Hand-eye calibration:")
+            print(calibration.to_dict())
 
-        if calibration is not None:
-            calibration.to_file(filepath[:-1], self.image_sampler.sensor_name+"_handeye_calibration")
+            if calibration is not None:
+                calibration.to_file(filepath[:-1], self.image_sampler.sensor_name+"_handeye_calibration_" + calibration_method)
+
+            if best_calib["name"] == calibration_method:
+                if calibration is not None:
+                    calibration.to_file(filepath[:-1], self.image_sampler.sensor_name+"_handeye_calibration")
+
 
     def collect_samples(self, file_name, tf_buffer):
         self.image_sampler.sample_multiple_streams()
@@ -150,6 +164,7 @@ class StereoCalibrator(Calibrator):
         msg_right_rectified = self.bridge.cv2_to_imgmsg(image_data[1], encoding="passthrough")
         stereo_info = image_data[2]
         # return self.aruco_detect(msg_left_rectified, msg_right_rectified, stereo_info, None, None, None)
+        # print(f"Stereo Info: {stereo_info}")
         return self.aruco_detect(msg_left_rectified, msg_right_rectified, stereo_info, msg_left_rectified, None, stereo_info.left_info)
 
     def sample_data(self):
@@ -331,27 +346,119 @@ class HandeyeCalibrator(object):
         if 0 <= index < len(self.samples):
             del self.samples[index]
 
-    def get_visp_samples(self):
+
+
+    def _evaluate_samples(self, hand_world_samples, camera_marker_samples, computed_calibration):
+        transformed_poses = []
+        xyz_transformed = []
+        rpy_transformed = []
+
+        metrics = {}
+
+        computed_transform = Transform(translation=computed_calibration.translation, rotation=computed_calibration.rotation)
+        camera_stereo_pair_transform = TransformStamped(transform=computed_transform)
+
+        for i, hand_world_transform in enumerate(hand_world_samples.transforms):
+            zero_pose = Pose()
+            zero_pose.orientation.w = 1.0
+
+            hand_world_transform_stamped = TransformStamped(transform=hand_world_transform)
+
+            camera_marker_transform = camera_marker_samples.transforms[i]
+            camera_marker_transform_stamped = TransformStamped(transform=camera_marker_transform)
+
+            aurco_to_optical_transformed = utils.transform_pose(zero_pose, camera_marker_transform_stamped)
+            optical_to_hand_transformed = utils.transform_pose(aurco_to_optical_transformed, camera_stereo_pair_transform)
+            hand_to_world_transformed = utils.transform_pose(optical_to_hand_transformed, hand_world_transform_stamped)
+            
+            transformed_pose = hand_to_world_transformed
+            transformed_poses.append(transformed_pose)
+
+            xyz_transformed.append(np.array([transformed_pose.position.x*1000, transformed_pose.position.y*1000, transformed_pose.position.z*1000]))
+
+            orientation = transformed_poses[i].orientation
+            euler = tf.transformations.euler_from_quaternion(np.array([orientation.x, orientation.y, orientation.z, orientation.w]))
+            rpy_transformed.append(np.array([math.degrees(euler[0]), math.degrees(euler[1]), math.degrees(euler[2])]))
+    
+        metrics["STD"] = {}
+        metrics["STD"]["xyz"] = np.std(xyz_transformed, axis=0).tolist()
+        metrics["STD"]["rpy"] = np.std(rpy_transformed, axis=0).tolist()
+        metrics["VAR"] = {}
+        metrics["VAR"]["xyz"] = np.var(xyz_transformed, axis=0).tolist()
+        metrics["VAR"]["rpy"] = np.var(rpy_transformed, axis=0).tolist()
+        metrics["MEAN"] = {} 
+        metrics["MEAN"]["xyz"] = np.mean(xyz_transformed, axis=0).tolist()
+        metrics["MEAN"]["rpy"] = np.mean(rpy_transformed, axis=0).tolist()
+
+        return metrics
+
+    def _msg_to_opencv(self, transform_msg):
+        cmt = transform_msg.translation
+        tr = np.array((cmt.x, cmt.y, cmt.z))
+        cmq = transform_msg.rotation
+        rot = tfs.quaternions.quat2mat((cmq.w, cmq.x, cmq.y, cmq.z))
+        return rot, tr
+
+
+    def _get_opencv_samples(self):
+        """
+        Returns the sample list as a rotation matrix and a translation vector.
+        :rtype: (np.array, np.array)
+        """
+        hand_base_rot = []
+        hand_base_tr = []
+        marker_camera_rot = []
+        marker_camera_tr = []
+
+        for s in self.samples:
+            camera_marker_msg = s['optical'].transform
+            (mcr, mct) = self._msg_to_opencv(camera_marker_msg)
+            marker_camera_rot.append(mcr)
+            marker_camera_tr.append(mct)
+
+            base_hand_msg = s['robot'].transform
+            (hbr, hbt) = self._msg_to_opencv(base_hand_msg)
+            hand_base_rot.append(hbr)
+            hand_base_tr.append(hbt)
+
+        return (hand_base_rot, hand_base_tr), (marker_camera_rot, marker_camera_tr)
+
+    def get_visp_samples(self, ranges=None):
         """
         Returns the sample list as a TransformArray.
         :rtype: visp_hand2eye_calibration.msg.TransformArray
         """
         hand_world_samples = TransformArray()
         # hand_world_samples.header.frame_id = self.robot_base_frame
-        hand_world_samples.header.frame_id = self.tracking_base_frame
+        hand_world_samples.header.frame_id = self.robot_base_frame
+        # hand_world_samples.header.frame_id = self.tracking_base_frame
         # DONTFIXME: yes, I know, it should be like the line above.
         # thing is, otherwise the results of the calibration are wrong. don't ask me why
 
         camera_marker_samples = TransformArray()
-        camera_marker_samples.header.frame_id = self.tracking_base_frame
+        # camera_marker_samples.header.frame_id = self.tracking_base_frame
+        ranges = ranges if ranges else [0, len(self.samples)-1]
 
-        for s in self.samples:
+        for i, s in enumerate(self.samples):
+            # for sample_range in ranges:
+            #     if sample_range[0] <= i <= sample_range[1]:
             camera_marker_samples.transforms.append(s['optical'].transform)
             hand_world_samples.transforms.append(s['robot'].transform)
 
+
         return hand_world_samples, camera_marker_samples
 
-    def compute_calibration(self):
+    def compute_calibration(self, filepath, method_name="All"):
+        AVAILABLE_CV_ALGORITHMS = {
+            'Tsai-Lenz': cv2.CALIB_HAND_EYE_TSAI,
+            'Park': cv2.CALIB_HAND_EYE_PARK,
+            'Horaud': cv2.CALIB_HAND_EYE_HORAUD,
+            'Andreff': cv2.CALIB_HAND_EYE_ANDREFF,
+            'Daniilidis': cv2.CALIB_HAND_EYE_DANIILIDIS,
+        }
+
+        calib_alg_metrics = {}
+        rets = {}
         """
         Computes the calibration through the ViSP service and returns it.
         :rtype: easy_handeye.handeye_calibration.HandeyeCalibration
@@ -361,29 +468,96 @@ class HandeyeCalibrator(object):
             return
 
         # Update data
+        num_samples = len(self.samples) - 1
+
+        ranges = ([0, 4], [num_samples-4, num_samples])
         hand_world_samples, camera_marker_samples = self.get_visp_samples()
+
+        opencv_samples = self._get_opencv_samples()
+        (hand_world_rot, hand_world_tr), (marker_camera_rot, marker_camera_tr) = opencv_samples
 
         if len(hand_world_samples.transforms) != len(camera_marker_samples.transforms):
             rospy.logerr("Different numbers of hand-world and camera-marker samples!")
             raise AssertionError
 
-        rospy.loginfo("Computing from %g poses..." % len(self.samples))
+        rospy.loginfo("Computing from %g poses..." % len(hand_world_samples.transforms))
+
+        #Best calib currently based on summation of xyz total, not sure if best way to do?
+        best_calib = {}
+        best_calib["std_xyz_sum"] = 1000
+        best_calib["name"] = None
 
         try:
-            result = self.calibrate(camera_marker_samples, hand_world_samples)
-            rospy.loginfo("Computed calibration: {}".format(str(result)))
-            transl = result.effector_camera.translation
-            rot = result.effector_camera.rotation
-            result_tuple = ((transl.x, transl.y, transl.z),
-                            (rot.x, rot.y, rot.z, rot.w))
+            if method_name == "Visp" or method_name == "All":
+                result = self.calibrate(camera_marker_samples, hand_world_samples)
+                rospy.loginfo("Computed calibration: {}".format(str(result)))
+                transl = result.effector_camera.translation
+                rot = result.effector_camera.rotation
+                result_tuple = ((transl.x, transl.y, transl.z),
+                                (rot.x, rot.y, rot.z, rot.w))
+                
+                ret = HandeyeCalibration(self.eye_on_hand,
+                                        self.robot_base_frame,
+                                        self.robot_effector_frame,
+                                        self.tracking_base_frame,
+                                        result_tuple)
 
-            ret = HandeyeCalibration(self.eye_on_hand,
-                                     self.robot_base_frame,
-                                     self.robot_effector_frame,
-                                     self.tracking_base_frame,
-                                     result_tuple)
+                print(f"Evaluating: VISP")
+                print(f"Transform: {result.effector_camera}")
+                calib_alg_metrics["Visp"] = self._evaluate_samples(hand_world_samples, camera_marker_samples, result.effector_camera)
+                
+                rets["Visp"] = ret
 
-            return ret
+                if sum(calib_alg_metrics["Visp"]["STD"]["xyz"]) < best_calib["std_xyz_sum"]:
+                    best_calib["name"] = "Visp"
+                    best_calib["std_xyz_sum"] = sum(calib_alg_metrics["Visp"]["STD"]["xyz"]) 
+
+
+            for method, cv2_code in AVAILABLE_CV_ALGORITHMS.items():
+                if method_name == method or method_name == "All":
+                    hand_camera_rot, hand_camera_tr = cv2.calibrateHandEye(hand_world_rot, hand_world_tr, marker_camera_rot,
+                                                                    marker_camera_tr, method=cv2_code)
+                    result = tfs.affines.compose(np.squeeze(hand_camera_tr), hand_camera_rot, [1, 1, 1])
+                    rospy.loginfo("Computed calibration: {}".format(str(result)))
+                    (hcqw, hcqx, hcqy, hcqz) = [float(i) for i in tfs.quaternions.mat2quat(hand_camera_rot)]
+                    (hctx, hcty, hctz) = [float(i) for i in hand_camera_tr]
+
+                    result_tuple = ((hctx, hcty, hctz), (hcqx, hcqy, hcqz, hcqw))
+
+                    transform = Transform()
+                    transform.translation.x = hctx
+                    transform.translation.y = hcty
+                    transform.translation.z = hctz
+                    transform.rotation.x = hcqx
+                    transform.rotation.y = hcqy
+                    transform.rotation.z = hcqz
+                    transform.rotation.w = hcqw
+
+                
+                    ret = HandeyeCalibration(self.eye_on_hand,
+                                            self.robot_base_frame,
+                                            self.robot_effector_frame,
+                                            self.tracking_base_frame,
+                                            result_tuple)
+
+                    print(f"Evaluating: CV_{method}")
+                    print(f"Transform: {transform}")
+                    calib_alg_metrics[method] = self._evaluate_samples(hand_world_samples, camera_marker_samples, transform)
+                    rets[method] = ret
+
+                    if sum(calib_alg_metrics[method]["STD"]["xyz"]) < best_calib["std_xyz_sum"]:
+                        best_calib["std_xyz_sum"] = sum(calib_alg_metrics[method]["STD"]["xyz"]) 
+                        best_calib["name"] = method
+
+            filename = filepath[:-1] + "/" + "calib_method_evaluations.yaml"
+
+
+
+            with open(filename, 'w') as calib_metrics:
+                calib_metrics.write(yaml.dump(calib_alg_metrics, default_flow_style=None))
+
+            print(f"Best Calib: {best_calib}")
+            return rets, best_calib
 
         except rospy.ServiceException as ex:
             rospy.logerr("Calibration failed: " + str(ex))
